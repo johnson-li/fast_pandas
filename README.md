@@ -10,8 +10,8 @@ pip install fast-pandas
 # Usage
 ```python
 import pandas as pd
-import fast-pandas
-fast-pandas.monkey_patch()
+import fast_pandas
+fast_pandas.monkey_patch()
 
 # write your codes
 # ...
