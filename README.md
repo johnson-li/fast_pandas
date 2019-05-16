@@ -1,5 +1,5 @@
 # fast-pandas
-Make your Pandas run faster with a single monkey\_patch call
+Make [pandas](https://pandas.pydata.org/) run faster with a single monkey\_patch call.
 
 # Install
 ```shell
@@ -13,7 +13,7 @@ import pandas as pd
 import fast_pandas
 fast_pandas.monkey_patch()
 
-# write your codes
+# write your pandas codes
 # ...
 
 ```

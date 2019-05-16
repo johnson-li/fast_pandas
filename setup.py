@@ -36,7 +36,6 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-
 # Package meta-data.
 NAME = 'fast_pandas'
 DESCRIPTION = 'A monkey patch that makes pandas run faster'
@@ -48,7 +47,7 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numba'
+    'numba', 'numpy', 'pandas'
 ]
 
 # What packages are optional?
@@ -86,6 +85,10 @@ else:
     about['__version__'] = VERSION
 
 
+class BenchmarkCommand(Command):
+    description = 'Benchmark key algorithms'
+
+
 class UploadCommand(Command):
     """Support setup.py upload."""
 
@@ -119,7 +122,7 @@ class UploadCommand(Command):
         self.status('Pushing git tags…')
         os.system('git tag v{0}'.format(about['__version__']))
         os.system('git push --tags')
-        
+
         sys.exit()
 
 
@@ -159,6 +162,7 @@ setup(
     cmdclass={
         'upload': UploadCommand,
         'test': PyTest,
+        'benchmark': BenchmarkCommand,
     },
     tests_require=test_requirements,
 )
