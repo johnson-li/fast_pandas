@@ -9,11 +9,12 @@ pip install fast-pandas
 
 # Usage
 ```python
+import pandas as pd
 from fast_pandas import monkey
 monkey.patch_all()
 
-# write your pandas codes
-# ...
+df = pd.DataFrame(data=[1])
+df.sort_values(kind='radixsort', by=0)
 
 ```
 
