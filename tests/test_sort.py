@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from fast_pandas.sort_api import radix_sort, radix_argsort
+from quick_pandas.sort_api import radix_sort, radix_argsort
 
 
 class TestSort(TestCase):

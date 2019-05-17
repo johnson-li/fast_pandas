@@ -37,7 +37,7 @@ class PyTest(TestCommand):
 
 
 # Package meta-data.
-NAME = 'fast_pandas'
+NAME = 'quick_pandas'
 DESCRIPTION = 'A monkey patch that makes pandas run faster'
 URL = 'https://github.com/johnson-li/fast-pandas'
 EMAIL = 'johnsonli1993@gmail.com'

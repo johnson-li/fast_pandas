@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from fast_pandas import monkey
+from quick_pandas import monkey
 
 monkey.patch_all()
 

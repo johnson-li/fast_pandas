@@ -1,5 +1,6 @@
 dist
 fast_pandas.egg-info
+quick_pandas.egg-info
 build
 .coverage
 **/__pycache__/

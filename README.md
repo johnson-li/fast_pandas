@@ -1,16 +1,16 @@
-# fast-pandas
+# quick-pandas
 Make [pandas](https://pandas.pydata.org/) run faster with a single monkey\_patch call.
 
 # Install
 ```shell
-pip install fast-pandas
+pip install quick-pandas
 
 ```
 
 # Usage
 ```python
 import pandas as pd
-from fast_pandas import monkey
+from quick_pandas import monkey
 monkey.patch_all()
 
 df = pd.DataFrame(data=[1])

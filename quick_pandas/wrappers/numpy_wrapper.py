@@ -2,8 +2,8 @@ import logging
 
 import numpy as np
 
-from fast_pandas.sort import radix_argsort, radix_sort
-from fast_pandas.wrappers.wrapper import Wrapper, FunctionWrapper
+from quick_pandas.sort import radix_argsort, radix_sort
+from quick_pandas.wrappers.wrapper import Wrapper, FunctionWrapper
 
 
 class ndarray_wrapper(Wrapper):

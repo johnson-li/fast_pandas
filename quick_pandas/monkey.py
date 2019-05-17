@@ -1,7 +1,7 @@
 import pandas
 
-from fast_pandas import sort_api
-from fast_pandas.wrappers.pandas_wrapper import pandas_core_sorting_nargsort
+from quick_pandas import sort_api
+from quick_pandas.wrappers.pandas_wrapper import pandas_core_sorting_nargsort
 
 
 def patch_numpy():

@@ -2,8 +2,8 @@ from unittest import TestCase
 
 import numpy as np
 
-from fast_pandas.wrappers.numpy_wrapper import ndarray_wrapper, NdarrayFunctionWrapper
-from fast_pandas.wrappers.wrapper import Wrapper
+from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper, NdarrayFunctionWrapper
+from quick_pandas.wrappers.wrapper import Wrapper
 
 
 class T:

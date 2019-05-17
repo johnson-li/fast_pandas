@@ -1,10 +1,10 @@
 from unittest import TestCase
 
-from fast_pandas import monkey
+from quick_pandas import monkey
 
 monkey.patch_all()
 
-from fast_pandas.wrappers.numpy_wrapper import ndarray_wrapper
+from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
 
 
 class TestPandas(TestCase):

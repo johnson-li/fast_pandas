@@ -1,7 +1,7 @@
 import numpy as np
 from pandas.core.sorting import *
 
-from fast_pandas import sort_api
+from quick_pandas import sort_api
 
 
 def argsort(array: np.ndarray, kind):

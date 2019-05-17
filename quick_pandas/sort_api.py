@@ -1,7 +1,7 @@
 import numpy as np
 
-from fast_pandas import sort
-from fast_pandas.wrappers.numpy_wrapper import ndarray_wrapper
+from quick_pandas import sort
+from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
 
 
 def radix_argsort(array):
