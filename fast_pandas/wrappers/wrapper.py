@@ -5,7 +5,7 @@ class Wrapper(object):
         if not self.__wrapped_class__:
             raise NotImplemented('__wrapped_class__ is not specified')
         __wrapped_instance__ = kwargs.pop('__wrapped_instance__', None)
-        if __wrapped_instance__:
+        if __wrapped_instance__ is not None:
             if not isinstance(__wrapped_instance__, self.__wrapped_class__):
                 raise Exception('wrapped instance %s is not an instance of wrapped class %s' % (
                     __wrapped_instance__, self.__wrapped_class__))

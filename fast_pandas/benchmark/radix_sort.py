@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from fast_pandas.sort import radix_sort, radix_argsort
+from fast_pandas.sort_api import radix_sort, radix_argsort
 
 
 def radix_sort_benchmark():

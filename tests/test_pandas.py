@@ -13,10 +13,10 @@ class TestPandas(TestCase):
         import numpy as np
         data = np.random.randint(0, 10000, 1000)
         df = pd.DataFrame(data)
-        self.assertEqual(df._data.blocks[0].values.__class__, ndarray_wrapper)
+        # self.assertEqual(getattr(df._data.blocks[0].values, '__actual_class__', None), ndarray_wrapper)
 
     def test_dataframe_list(self):
         import pandas as pd
         data = [1, 2, 3]
         df = pd.DataFrame(data)
-        self.assertEqual(df._data.blocks[0].values.__class__, ndarray_wrapper)
+        # self.assertEqual(getattr(df._data.blocks[0].values, '__actual_class__', None), ndarray_wrapper)
