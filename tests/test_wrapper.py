@@ -1,5 +1,8 @@
 from unittest import TestCase
 
+import numpy as np
+
+from fast_pandas.wrappers.numpy_wrapper import ndarray_wrapper, NdarrayFunctionWrapper
 from fast_pandas.wrappers.wrapper import Wrapper
 
 
@@ -21,6 +24,7 @@ class T_Wraped(Wrapper):
         return 'tw'
 
 
+Origin = T
 T = T_Wraped
 
 
@@ -33,3 +37,15 @@ class TestPatch(TestCase):
         t = T('asdf')
         self.assertEqual(t.t(), 'tw')
         self.assertEqual(t.tt(), 'asdf')
+
+    def test_wrapper_agent(self):
+        t = Origin('asdf')
+        t = T(__wrapped_instance__=t)
+        self.assertEqual(t.t(), 'tw')
+        self.assertEqual(t.tt(), 'asdf')
+
+    def test_ndarray_wrapper(self):
+        np.ndarray = ndarray_wrapper
+        np.empty = NdarrayFunctionWrapper(np.empty)
+        a = np.empty((1,))
+        self.assertEqual(type(a), ndarray_wrapper)

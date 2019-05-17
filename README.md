@@ -9,12 +9,13 @@ pip install fast-pandas
 
 # Usage
 ```python
-import pandas as pd
-import fast_pandas
-fast_pandas.monkey_patch()
+from fast_pandas import monkey
+monkey.patch_all()
 
 # write your pandas codes
 # ...
 
 ```
 
+# Notice
+This library is still under development and is unstable. Do *NOT* use it unless you know what you are doing. 

@@ -1,6 +1,8 @@
 import numpy as np
 from numba import njit
 
+from fast_pandas.wrappers.numpy_wrapper import ndarray_wrapper
+
 INSERTION_SORT_LIMIT = 64
 RADIX_BITS = 16
 
@@ -54,6 +56,8 @@ def radix_sort0(array: np.ndarray, array_offset: int, array_length: int):
 
 
 def radix_sort(array: np.ndarray):
+    if isinstance(array, ndarray_wrapper):
+        array = ndarray_wrapper.__wrapped_instance__
     radix_sort0(array, 0, len(array))
 
 
@@ -112,16 +116,8 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
 
 
 def radix_argsort(array: np.ndarray):
+    if isinstance(array, ndarray_wrapper):
+        array = ndarray_wrapper.__wrapped_instance__
     indexes = np.arange(array.shape[0])
     radix_argsort0(array, indexes, 0, len(array))
     return indexes
-
-
-if __name__ == '__main__':
-    a = np.random.random_integers(0, 1000, 100000)
-    res = radix_argsort(a)
-    print(res)
-    for i in range(1, len(res)):
-        if a[res[i - 1]] > a[res[i]]:
-            print(a[res])
-            raise Exception('order is not correct')

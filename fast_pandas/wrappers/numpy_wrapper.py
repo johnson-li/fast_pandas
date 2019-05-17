@@ -1,7 +1,33 @@
+import logging
+
 import numpy as np
 
-from fast_pandas.wrappers.wrapper import Wrapper
+from fast_pandas.sort import radix_argsort, radix_sort
+from fast_pandas.wrappers.wrapper import Wrapper, FunctionWrapper
 
 
 class ndarray_wrapper(Wrapper):
     __wrapped_class__ = np.ndarray
+
+    def sort(self, axis=-1, kind='quicksort', order=None):
+        if kind == 'radixsort' and len(self.__wrapped_instance__.shape) == 1:
+            return radix_sort(self.__wrapped_instance__)
+        return self.__wrapped_instance__.sort(axis, kind, order)
+
+    def argsort(self, axis=-1, kind='quicksort', order=None):
+        if kind == 'radixsort' and len(self.__wrapped_instance__.shape) == 1:
+            return radix_argsort(self.__wrapped_instance__)
+        return self.__wrapped_instance__.sort(axis, kind, order)
+
+    def __len__(self):
+        return self.__wrapped_instance__.__len__()
+
+
+class NdarrayFunctionWrapper(FunctionWrapper):
+    def __call__(self, *args, **kwargs):
+        res = self.func(*args, **kwargs)
+        if isinstance(res, ndarray_wrapper.__wrapped_class__):
+            return ndarray_wrapper(__wrapped_instance__=res)
+        else:
+            logging.warning("The result %s is not an instance of numpy.ndarray")
+            return res
