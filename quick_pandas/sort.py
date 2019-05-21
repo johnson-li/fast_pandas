@@ -70,8 +70,8 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
                 j -= 1
             array[indexes[j]] = val
         return
-    min_val = 0
-    max_val = 0
+    min_val = array[indexes[array_offset]]
+    max_val = array[indexes[array_offset]]
     for i in range(array_offset + 1, array_offset + array_length):
         index = indexes[i]
         if array[index] > max_val:

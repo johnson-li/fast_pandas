@@ -7,7 +7,7 @@ from quick_pandas import sort_api
 def argsort(array: np.ndarray, kind):
     if array.dtype in [int] and kind == 'radixsort':
         return sort_api.radix_argsort(array)
-    return array.argsort(kind=kind)
+    return array.argsort(kind='quicksort' if kind == 'radixsort' else kind)
 
 
 def pandas_core_sorting_nargsort(items, kind='quicksort', ascending=True, na_position='last'):
