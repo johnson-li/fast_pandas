@@ -3,7 +3,7 @@ Make [pandas](https://pandas.pydata.org/) run faster with a single monkey\_patch
 
 # Install
 ```shell
-pip install quick-pandas
+pip install quick-pandas --upgrade
 
 ```
 
