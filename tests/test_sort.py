@@ -18,7 +18,19 @@ class TestSort(TestCase):
         for array_range in [1, 10, 100, 1000, 10000, 100000]:
             for array_length in [1, 10, 100, 1000, 10000, 100000]:
                 array = np.random.randint(-array_range, array_range, (array_length,))
+                array_cpy = array.copy()
                 indexes = radix_argsort(array)
                 array_sorted = np.sort(array)
                 for i in range(array.shape[0]):
-                    self.assertEqual(array[indexes[i]], array_sorted[i])
+                    self.assertEqual(array_cpy[indexes[i]], array_sorted[i])
+
+    def test_radix_argsort_str(self):
+        for array_range in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000]:
+            for array_length in [1, 10, 100, 1000, 10000, 100000, 1000000]:
+                array = np.random.randint(0, array_range, (array_length,))
+                array = array.astype(str)
+                array_cpy = array.copy()
+                indexes = radix_argsort(array)
+                array_sorted = np.sort(array_cpy)
+                for i in range(array.shape[0]):
+                    self.assertEqual(array_cpy[indexes[i]], array_sorted[i])

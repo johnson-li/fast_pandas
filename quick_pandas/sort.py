@@ -63,12 +63,12 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
         return
     if array_length <= INSERTION_SORT_LIMIT:
         for i in range(array_offset + 1, array_offset + array_length):
-            val = array[indexes[i]]
+            val = indexes[i]
             j = i
-            while j > array_offset and val < array[indexes[j - 1]]:
-                array[indexes[j]] = array[indexes[j - 1]]
+            while j > array_offset and array[val] < array[indexes[j - 1]]:
+                indexes[j] = indexes[j - 1]
                 j -= 1
-            array[indexes[j]] = val
+            indexes[j] = val
         return
     min_val = array[indexes[array_offset]]
     max_val = array[indexes[array_offset]]
@@ -79,7 +79,7 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
         if array[index] < min_val:
             min_val = array[index]
     length = max_val - min_val
-    value_bits = 64
+    value_bits = array.itemsize * 8
     div = value_bits // 2
     while div > 0:
         if length >> div == 0:
@@ -111,7 +111,78 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
             radix_argsort0(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1])
 
 
+@njit()
+def array_cmp_ge(a, b, offset, length):
+    if length == 0:
+        return True
+    if a[offset] > b[offset]:
+        return True
+    elif a[offset] < b[offset]:
+        return False
+    return array_cmp_ge(a, b, offset + 1, length - 1)
+
+
+@njit()
+def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, str_offset):
+    if array_length == 0:
+        return
+    if str_offset >= len(array[0]):
+        return
+    if array_length <= INSERTION_SORT_LIMIT:
+        for i in range(array_offset + 1, array_offset + array_length):
+            val = indexes[i]
+            j = i
+            while j > array_offset and not array_cmp_ge(array[val], array[indexes[j - 1]], str_offset,
+                                                        array.shape[1] - str_offset):
+                indexes[j] = indexes[j - 1]
+                j -= 1
+            indexes[j] = val
+        return
+
+    min_val = array[indexes[array_offset]][str_offset]
+    max_val = array[indexes[array_offset]][str_offset]
+    for index in indexes[array_offset: array_offset + array_length]:
+        val = array[index][str_offset]
+        if val < min_val:
+            min_val = val
+        elif val > max_val:
+            max_val = val
+    if min_val == max_val:
+        return radix_argsort0_str(array, indexes, array_offset, array_length, str_offset + 1)
+    length = max_val - min_val
+    value_bits = 8
+    div = value_bits // 2
+    while div > 0:
+        if length >> div == 0:
+            value_bits -= div
+        else:
+            length >>= div
+        div >>= 1
+    bins = np.zeros((1 << value_bits) + 1, np.int32)
+    for index in indexes[array_offset: array_offset + array_length]:
+        val = array[index][str_offset]
+        bin_i = val - min_val
+        bins[bin_i + 1] += 1
+    for i in range(1, len(bins)):
+        bins[i] += bins[i - 1]
+    count = bins.copy()
+    new_indexes = np.zeros_like(indexes[array_offset: array_offset + array_length])
+    for val in indexes[array_offset: array_offset + array_length]:
+        bin_i = array[val][str_offset] - min_val
+        index = count[bin_i]
+        count[bin_i] += 1
+        new_indexes[index] = val
+    indexes[array_offset:array_offset + array_length] = new_indexes
+    for i in range(1, len(bins)):
+        radix_argsort0_str(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], str_offset + 1)
+
+
 def radix_argsort(array: np.ndarray):
     indexes = np.arange(array.shape[0])
-    radix_argsort0(array, indexes, 0, len(array))
+    if array.dtype in [int]:
+        radix_argsort0(array, indexes, 0, len(array))
+    elif array.dtype.type in [np.str_]:
+        radix_argsort0_str(array.view(np.uint8).reshape(-1, array.itemsize), indexes, 0, len(array), 0)
+    else:
+        raise Exception('unsupported data type %s' % array.dtype)
     return indexes
