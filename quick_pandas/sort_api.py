@@ -4,10 +4,10 @@ from quick_pandas import sort
 from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
 
 
-def radix_argsort(array):
+def radix_argsort(array, unicode=True):
     if getattr(array, '__actual_class__', None) == ndarray_wrapper:
         array = array.__wrapped_instance__
-    return sort.radix_argsort(array)
+    return sort.radix_argsort(array, unicode=unicode)
 
 
 def radix_sort(array):

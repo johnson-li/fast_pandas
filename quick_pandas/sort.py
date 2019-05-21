@@ -119,16 +119,19 @@ def array_cmp_ge(a, b, offset, length):
         return True
     elif a[offset] < b[offset]:
         return False
+    elif a[offset] == 0:
+        return True
     return array_cmp_ge(a, b, offset + 1, length - 1)
 
 
 @njit()
-def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, str_offset):
+def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, str_offset: int,
+                       unicode: bool):
     if array_length == 0:
         return
     if str_offset >= len(array[0]):
         return
-    if array_length <= INSERTION_SORT_LIMIT:
+    if array_length < INSERTION_SORT_LIMIT:
         for i in range(array_offset + 1, array_offset + array_length):
             val = indexes[i]
             j = i
@@ -148,7 +151,10 @@ def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int
         elif val > max_val:
             max_val = val
     if min_val == max_val:
-        return radix_argsort0_str(array, indexes, array_offset, array_length, str_offset + 1)
+        if max_val == 0 and (unicode or str_offset % 4) == 0:
+            return
+        else:
+            return radix_argsort0_str(array, indexes, array_offset, array_length, str_offset + 1, unicode)
     length = max_val - min_val
     value_bits = 8
     div = value_bits // 2
@@ -174,15 +180,19 @@ def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int
         new_indexes[index] = val
     indexes[array_offset:array_offset + array_length] = new_indexes
     for i in range(1, len(bins)):
-        radix_argsort0_str(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], str_offset + 1)
+        if i == 1 and min_val == 0 and (unicode or str_offset % 4 == 0):
+            continue
+        radix_argsort0_str(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], str_offset + 1, unicode)
 
 
-def radix_argsort(array: np.ndarray):
+def radix_argsort(array: np.ndarray, unicode=True):
     indexes = np.arange(array.shape[0])
     if array.dtype in [int]:
         radix_argsort0(array, indexes, 0, len(array))
     elif array.dtype.type in [np.str_]:
-        radix_argsort0_str(array.view(np.uint8).reshape(-1, array.itemsize), indexes, 0, len(array), 0)
+        radix_argsort0_str(array.view(np.uint8 if unicode else np.uint32)
+                           .reshape(-1, array.itemsize if unicode else array.itemsize // 4), indexes, 0,
+                           len(array), 0, unicode=unicode)
     else:
         raise Exception('unsupported data type %s' % array.dtype)
     return indexes
