@@ -66,6 +66,6 @@ def radix_sort_int_benchmark():
 
 
 if __name__ == '__main__':
-    # radix_sort_int_benchmark()
-    # radix_sort_str_benchmark()
+    radix_sort_int_benchmark()
+    radix_sort_str_benchmark()
     radix_sort_float_benchmark()
