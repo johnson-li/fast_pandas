@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit
 
 INSERTION_SORT_LIMIT = 64
-RADIX_BITS = 16
+RADIX_BITS = 8
 
 
 @njit()
@@ -185,14 +185,76 @@ def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int
         radix_argsort0_str(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], str_offset + 1, unicode)
 
 
+@njit()
+def convert_float64(item):
+    if (item & np.uint64(0x8000000000000000)) == 0:
+        return item ^ np.uint64(0x8000000000000000)
+    return item ^ np.uint64(0xffffffffffffffff)
+
+
+@njit()
+def convert_float32(item):
+    if (item & 0x80000000) == 0:
+        return item ^ 0x80000000
+    return item ^ 0xffffffff
+
+
+@njit()
+def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, value_bits: int):
+    if array_length <= 1 or value_bits == 0:
+        return
+    if array_length <= INSERTION_SORT_LIMIT:
+        for i in range(array_offset + 1, array_offset + array_length):
+            index = indexes[i]
+            j = i
+            while j > array_offset and array[index] < array[indexes[j - 1]]:
+                indexes[j] = indexes[j - 1]
+                j -= 1
+            indexes[j] = index
+        return
+    value_mask = np.uint64(-1) >> np.uint64(array.itemsize * 8 - value_bits) \
+        if array.itemsize == 8 else np.uint32(-1) >> np.uint32(array.itemsize * 8 - value_bits)
+    bits = min(value_bits, RADIX_BITS)
+    shift = value_bits - bits
+    bin_length = 1 << bits
+    bins = np.zeros(bin_length + 1, np.int32)
+    for index in indexes[array_offset: array_offset + array_length]:
+        array_value = array[index] & value_mask
+        bin_i = array_value >> np.uint32(shift)
+        bins[bin_i + 1] += 1
+    for i in range(1, bin_length + 1):
+        bins[i] += bins[i - 1]
+    count = bins.copy()
+    new_indexes = np.zeros_like(indexes[array_offset: array_offset + array_length])
+    for val in indexes[array_offset: array_offset + array_length]:
+        array_value = array[val] & value_mask
+        bin_i = array_value >> np.uint32(shift)
+        index = count[bin_i]
+        count[bin_i] += 1
+        new_indexes[index] = val
+    indexes[array_offset:array_offset + array_length] = new_indexes
+    for i in range(1, bin_length + 1):
+        radix_argsort0_float(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], shift)
+
+
+@njit()
+def radix_argsort_float(array: np.ndarray, indexes: np.ndarray):
+    array_int = np.empty_like(array)
+    for i in range(len(array_int)):
+        array_int[i] = convert_float64(array[i]) if array.itemsize == 8 else convert_float32(array[i])
+    return radix_argsort0_float(array_int, indexes, 0, len(array_int), array_int.itemsize * 8)
+
+
 def radix_argsort(array: np.ndarray, unicode=True):
-    indexes = np.arange(array.shape[0])
+    indexes = np.arange(array.shape[0], dtype=int)
     if array.dtype in [int]:
         radix_argsort0(array, indexes, 0, len(array))
     elif array.dtype.type in [np.str_]:
         radix_argsort0_str(array.view(np.uint8 if unicode else np.uint32)
                            .reshape(-1, array.itemsize if unicode else array.itemsize // 4), indexes, 0,
                            len(array), 0, unicode=unicode)
+    elif array.dtype.type in [np.float32, np.float64]:
+        radix_argsort_float(array.view(np.uint64 if array.itemsize == 8 else np.uint32), indexes)
     else:
         raise Exception('unsupported data type %s' % array.dtype)
     return indexes

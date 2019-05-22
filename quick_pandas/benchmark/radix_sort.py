@@ -25,6 +25,25 @@ def radix_sort_str_benchmark():
         logging.warning("[str] radix argsort(unicode=False) causes %fs" % (time.time() - ts))
 
 
+def radix_sort_float_benchmark():
+    array_range = 10000
+    array_length = 10000000
+    array = np.random.rand(array_length)
+    array -= 0.5
+    array *= array_range
+    dtype = np.float64
+    array = array.astype(dtype)
+    np.argsort(np.zeros((1,), dtype=dtype))
+    radix_argsort(np.zeros((1,), dtype=dtype))
+    for i in range(3):
+        ts = time.time()
+        np.argsort(array, kind='quicksort')
+        logging.warning("[float] quick argsort causes %fs" % (time.time() - ts))
+        ts = time.time()
+        radix_argsort(array)
+        logging.warning("[float] radix argsort causes %fs" % (time.time() - ts))
+
+
 def radix_sort_int_benchmark():
     array_range = 10000
     array_length = 100000000
@@ -47,5 +66,6 @@ def radix_sort_int_benchmark():
 
 
 if __name__ == '__main__':
-    radix_sort_int_benchmark()
-    radix_sort_str_benchmark()
+    # radix_sort_int_benchmark()
+    # radix_sort_str_benchmark()
+    radix_sort_float_benchmark()
