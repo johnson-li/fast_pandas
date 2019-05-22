@@ -194,9 +194,9 @@ def convert_float64(item):
 
 @njit()
 def convert_float32(item):
-    if (item & 0x80000000) == 0:
-        return item ^ 0x80000000
-    return item ^ 0xffffffff
+    if (item & np.uint32(0x80000000)) == 0:
+        return item ^ np.uint32(0x80000000)
+    return item ^ np.uint32(0xffffffff)
 
 
 @njit()
@@ -212,14 +212,20 @@ def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: i
                 j -= 1
             indexes[j] = index
         return
-    value_mask = np.uint64(-1) >> np.uint64(array.itemsize * 8 - value_bits) \
-        if array.itemsize == 8 else np.uint32(-1) >> np.uint32(array.itemsize * 8 - value_bits)
+    double = array.itemsize == 8
+    value_bits_total = array.itemsize * 8
+    value_mask = np.uint64(-1) >> np.uint64(value_bits_total - value_bits) \
+        if double else np.uint32(-1) >> np.uint32(value_bits_total - value_bits)
     bits = min(value_bits, RADIX_BITS)
     shift = value_bits - bits
     bin_length = 1 << bits
     bins = np.zeros(bin_length + 1, np.int32)
     for index in indexes[array_offset: array_offset + array_length]:
-        array_value = array[index] & value_mask
+        array_value = array[index]
+        if double:
+            array_value = convert_float64(array_value) & value_mask
+        else:
+            array_value = convert_float32(array_value) & value_mask
         bin_i = array_value >> np.uint32(shift)
         bins[bin_i + 1] += 1
     for i in range(1, bin_length + 1):
@@ -227,7 +233,11 @@ def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: i
     count = bins.copy()
     new_indexes = np.zeros_like(indexes[array_offset: array_offset + array_length])
     for val in indexes[array_offset: array_offset + array_length]:
-        array_value = array[val] & value_mask
+        array_value = array[val]
+        if double:
+            array_value = convert_float64(array_value) & value_mask
+        else:
+            array_value = convert_float32(array_value) & value_mask
         bin_i = array_value >> np.uint32(shift)
         index = count[bin_i]
         count[bin_i] += 1
@@ -239,10 +249,7 @@ def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: i
 
 @njit()
 def radix_argsort_float(array: np.ndarray, indexes: np.ndarray):
-    array_int = np.empty_like(array)
-    for i in range(len(array_int)):
-        array_int[i] = convert_float64(array[i]) if array.itemsize == 8 else convert_float32(array[i])
-    return radix_argsort0_float(array_int, indexes, 0, len(array_int), array_int.itemsize * 8)
+    return radix_argsort0_float(array, indexes, 0, len(array), array.itemsize * 8)
 
 
 def radix_argsort(array: np.ndarray, unicode=True):
