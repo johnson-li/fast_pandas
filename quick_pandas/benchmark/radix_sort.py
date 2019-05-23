@@ -19,7 +19,7 @@ def radix_sort_str_benchmark():
         logging.warning("[str] quick argsort causes %fs" % (time.time() - ts))
         ts = time.time()
         radix_argsort(array)
-        logging.warning("[str] radix argsort causes %fs" % (time.time() - ts))
+        logging.warning("[str] radix argsort(unicode=True) causes %fs" % (time.time() - ts))
         ts = time.time()
         radix_argsort(array, unicode=False)
         logging.warning("[str] radix argsort(unicode=False) causes %fs" % (time.time() - ts))
@@ -31,17 +31,17 @@ def radix_sort_float_benchmark():
     array = np.random.rand(array_length)
     array -= 0.5
     array *= array_range
-    dtype = np.float64
-    array = array.astype(dtype)
-    np.argsort(np.zeros((1,), dtype=dtype))
-    radix_argsort(np.zeros((1,), dtype=dtype))
-    for i in range(3):
-        ts = time.time()
-        np.argsort(array, kind='quicksort')
-        logging.warning("[float] quick argsort causes %fs" % (time.time() - ts))
-        ts = time.time()
-        radix_argsort(array)
-        logging.warning("[float] radix argsort causes %fs" % (time.time() - ts))
+    for dtype in [np.float64, np.float32]:
+        array = array.astype(dtype)
+        np.argsort(np.zeros((1,), dtype=dtype))
+        radix_argsort(np.zeros((1,), dtype=dtype))
+        for i in range(3):
+            ts = time.time()
+            np.argsort(array, kind='quicksort')
+            logging.warning("[%s] quick argsort causes %fs" % (dtype, time.time() - ts))
+            ts = time.time()
+            radix_argsort(array)
+            logging.warning("[%s] radix argsort causes %fs" % (dtype, time.time() - ts))
 
 
 def radix_sort_int_benchmark():
@@ -51,9 +51,6 @@ def radix_sort_int_benchmark():
     radix_sort(np.zeros((1,), dtype=int))
     radix_argsort(np.zeros((1,), dtype=int))
     for i in range(3):
-        ts = time.time()
-        np.sort(array, kind='quicksort')
-        logging.warning("[int] quick sort causes %fs" % (time.time() - ts))
         ts = time.time()
         np.argsort(array, kind='quicksort')
         logging.warning("[int] quick argsort causes %fs" % (time.time() - ts))

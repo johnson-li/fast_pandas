@@ -1,12 +1,14 @@
 import numpy as np
 
-from quick_pandas import sort
+from quick_pandas import sort, config
 from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
 
 
-def radix_argsort(array, unicode=True):
+def radix_argsort(array, unicode=None):
     if getattr(array, '__actual_class__', None) == ndarray_wrapper:
         array = array.__wrapped_instance__
+    if unicode is None:
+        unicode = not config.ASCII_SORT
     return sort.radix_argsort(array, unicode=unicode)
 
 

@@ -1,12 +1,16 @@
-import numpy as np
+import logging
+
 from pandas.core.sorting import *
 
 from quick_pandas import sort_api
 
+logger = logging.getLogger('pandas_wrapper')
+
 
 def argsort(array: np.ndarray, kind):
-    if array.dtype in [int] and kind == 'radixsort':
+    if array.dtype.type in [np.int64, np.int32, np.str_, np.float32, np.float64] and kind == 'radixsort':
         return sort_api.radix_argsort(array)
+    logger.warning('revert to quick sort')
     return array.argsort(kind='quicksort' if kind == 'radixsort' else kind)
 
 

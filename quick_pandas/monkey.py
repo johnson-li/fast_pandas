@@ -1,6 +1,6 @@
 import pandas
 
-from quick_pandas import sort_api
+from quick_pandas import sort_api, config
 from quick_pandas.wrappers.pandas_wrapper import pandas_core_sorting_nargsort
 
 
@@ -14,7 +14,8 @@ def patch_pandas():
     pandas.core.sorting.nargsort = pandas_core_sorting_nargsort
 
 
-def init():
+def init(ascii_sort=False):
+    config.ASCII_SORT = ascii_sort
     sort_api.init()
 
 
