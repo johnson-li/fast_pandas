@@ -26,7 +26,7 @@ class TestSort(TestCase):
 
     def test_radix_argsort_str(self):
         for array_range in [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000]:
-            for array_length in [1, 10, 100, 1000, 10000, 100000, 1000000]:
+            for array_length in [1, 10, 100, 1000, 10000, 100000]:
                 array = np.random.randint(0, array_range, (array_length,))
                 array = array.astype(str)
                 array_cpy = array.copy()

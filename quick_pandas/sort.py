@@ -112,16 +112,19 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
 
 
 @njit()
-def array_cmp_ge(a, b, offset, length):
+def array_cmp_lt(a, b, offset, length, unicode):
     if length == 0:
-        return True
-    if a[offset] > b[offset]:
-        return True
-    elif a[offset] < b[offset]:
         return False
-    elif a[offset] == 0:
+    if a[offset] < b[offset]:
         return True
-    return array_cmp_ge(a, b, offset + 1, length - 1)
+    elif a[offset] > b[offset]:
+        return False
+    elif (not unicode or (offset % 4) == 0) and a[offset] == 0:
+        if b[offset] != 0:
+            return True
+        else:
+            return False
+    return array_cmp_lt(a, b, offset + 1, length - 1, unicode)
 
 
 @njit()
@@ -135,8 +138,8 @@ def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int
         for i in range(array_offset + 1, array_offset + array_length):
             val = indexes[i]
             j = i
-            while j > array_offset and not array_cmp_ge(array[val], array[indexes[j - 1]], str_offset,
-                                                        array.shape[1] - str_offset):
+            while j > array_offset and array_cmp_lt(array[val], array[indexes[j - 1]], str_offset,
+                                                    array.shape[1] - str_offset, unicode):
                 indexes[j] = indexes[j - 1]
                 j -= 1
             indexes[j] = val
@@ -200,19 +203,23 @@ def convert_float32(item):
 
 
 @njit()
-def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, value_bits: int):
+def radix_argsort0_float(array_float: np.ndarray, array: np.ndarray, indexes: np.ndarray, array_offset: int,
+                         array_length: int, value_bits: int):
     if array_length <= 1 or value_bits == 0:
         return
+    double = array.itemsize == 8
     if array_length <= INSERTION_SORT_LIMIT:
         for i in range(array_offset + 1, array_offset + array_length):
             index = indexes[i]
             j = i
-            while j > array_offset and array[index] < array[indexes[j - 1]]:
+            now = array_float[index]
+            pre = array_float[indexes[j - 1]]
+            while j > array_offset and (now < pre or (np.isnan(pre) and not np.isnan(now))):
                 indexes[j] = indexes[j - 1]
                 j -= 1
+                pre = array_float[indexes[j - 1]]
             indexes[j] = index
         return
-    double = array.itemsize == 8
     value_bits_total = array.itemsize * 8
     value_mask = np.uint64(-1) >> np.uint64(value_bits_total - value_bits) \
         if double else np.uint32(-1) >> np.uint32(value_bits_total - value_bits)
@@ -244,12 +251,7 @@ def radix_argsort0_float(array: np.ndarray, indexes: np.ndarray, array_offset: i
         new_indexes[index] = val
     indexes[array_offset:array_offset + array_length] = new_indexes
     for i in range(1, bin_length + 1):
-        radix_argsort0_float(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], shift)
-
-
-@njit()
-def radix_argsort_float(array: np.ndarray, indexes: np.ndarray):
-    return radix_argsort0_float(array, indexes, 0, len(array), array.itemsize * 8)
+        radix_argsort0_float(array_float, array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], shift)
 
 
 def radix_argsort(array: np.ndarray, unicode=True):
@@ -261,7 +263,8 @@ def radix_argsort(array: np.ndarray, unicode=True):
                            .reshape(-1, array.itemsize if unicode else array.itemsize // 4), indexes, 0,
                            len(array), 0, unicode=unicode)
     elif array.dtype.type in [np.float32, np.float64]:
-        radix_argsort_float(array.view(np.uint64 if array.itemsize == 8 else np.uint32), indexes)
+        radix_argsort0_float(array, array.view(np.uint64 if array.itemsize == 8 else np.uint32),
+                             indexes, 0, len(array), array.itemsize * 8)
     else:
         raise Exception('unsupported data type %s' % array.dtype)
     return indexes
