@@ -1,7 +1,7 @@
 import pandas
 
 from quick_pandas import sort_api, config
-from quick_pandas.wrappers.pandas_wrapper import pandas_core_sorting_nargsort
+from quick_pandas.wrappers.pandas_wrapper import pandas_core_sorting_nargsort, pandas_read_csv
 
 
 def patch_numpy():
@@ -12,6 +12,7 @@ def patch_numpy():
 
 def patch_pandas():
     pandas.core.sorting.nargsort = pandas_core_sorting_nargsort
+    pandas.read_csv = pandas_read_csv(pandas_read_csv)
 
 
 def init(ascii_sort=False):

@@ -1,6 +1,7 @@
 import logging
 
 from pandas.core.sorting import *
+from pandas import DataFrame
 
 from quick_pandas import sort_api
 
@@ -72,3 +73,23 @@ def pandas_core_sorting_nargsort(items, kind='quicksort', ascending=True, na_pos
     else:
         raise ValueError('invalid na_position: {!r}'.format(na_position))
     return indexer
+
+
+def pandas_read_csv(func):
+    def wrapped(*args, **kwargs):
+        path = None
+        try:
+            import datatable as dt
+            if len(args) == 1 and len(kwargs) == 0:
+                path = args[0]
+            elif len(args) == 0 and len(kwargs) == 1 and 'path' in kwargs:
+                path = kwargs.pop('path')
+        except ImportError as e:
+            logger.warning(e)
+        if path:
+            df = dt.fread(path)
+            data = df.to_numpy().T
+            return DataFrame(dict(zip(df.names, data)))
+        return func(*args, **kwargs)
+
+    return wrapped
