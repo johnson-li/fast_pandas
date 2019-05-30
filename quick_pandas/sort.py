@@ -1,11 +1,16 @@
+from typing import List
+
 import numpy as np
 from numba import njit
 
+from quick_pandas import dtypes
+
 INSERTION_SORT_LIMIT = 64
 RADIX_BITS = 8
+NUMBA_CACHE = False
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def radix_sort0(array: np.ndarray, array_offset: int, array_length: int):
     if array_length == 0:
         return
@@ -57,23 +62,16 @@ def radix_sort(array: np.ndarray):
     radix_sort0(array, 0, len(array))
 
 
-@njit()
-def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int):
+@njit(cache=NUMBA_CACHE)
+def radix_argsort0_int(array_list: List[np.ndarray], array_type_list: List[int], array_index: int,
+                       array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int):
     if array_length == 0:
         return
     if array_length <= INSERTION_SORT_LIMIT:
-        for i in range(array_offset + 1, array_offset + array_length):
-            val = indexes[i]
-            j = i
-            while j > array_offset and array[val] < array[indexes[j - 1]]:
-                indexes[j] = indexes[j - 1]
-                j -= 1
-            indexes[j] = val
-        return
+        return insertion_argsort0(array_list, array_type_list, array_index, indexes, array_offset, array_length)
     min_val = array[indexes[array_offset]]
     max_val = array[indexes[array_offset]]
-    for i in range(array_offset + 1, array_offset + array_length):
-        index = indexes[i]
+    for index in indexes[array_offset + 1: array_offset + array_length]:
         if array[index] > max_val:
             max_val = array[index]
         if array[index] < min_val:
@@ -106,12 +104,17 @@ def radix_argsort0(array: np.ndarray, indexes: np.ndarray, array_offset: int, ar
         count[bin_i] += 1
         new_indexes[index] = val
     indexes[array_offset:array_offset + array_length] = new_indexes
-    if not last:
+    if last:
         for i in range(1, bin_length + 1):
-            radix_argsort0(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1])
+            radix_argsort0_mix(array_list, array_type_list, array_index + 1, indexes,
+                               array_offset + bins[i - 1], bins[i] - bins[i - 1])
+    else:
+        for i in range(1, bin_length + 1):
+            radix_argsort0_int(array_list, array_type_list, array_index, array, indexes,
+                               array_offset + bins[i - 1], bins[i] - bins[i - 1])
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def array_cmp_lt(a, b, offset, length, unicode):
     if length == 0:
         return False
@@ -127,7 +130,7 @@ def array_cmp_lt(a, b, offset, length, unicode):
     return array_cmp_lt(a, b, offset + 1, length - 1, unicode)
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int, array_length: int, str_offset: int,
                        unicode: bool):
     if array_length == 0:
@@ -188,21 +191,21 @@ def radix_argsort0_str(array: np.ndarray, indexes: np.ndarray, array_offset: int
         radix_argsort0_str(array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], str_offset + 1, unicode)
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def convert_float64(item):
     if (item & np.uint64(0x8000000000000000)) == 0:
         return item ^ np.uint64(0x8000000000000000)
     return item ^ np.uint64(0xffffffffffffffff)
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def convert_float32(item):
     if (item & np.uint32(0x80000000)) == 0:
         return item ^ np.uint32(0x80000000)
     return item ^ np.uint32(0xffffffff)
 
 
-@njit()
+@njit(cache=NUMBA_CACHE)
 def radix_argsort0_float(array_float: np.ndarray, array: np.ndarray, indexes: np.ndarray, array_offset: int,
                          array_length: int, value_bits: int):
     if array_length <= 1 or value_bits == 0:
@@ -254,10 +257,106 @@ def radix_argsort0_float(array_float: np.ndarray, array: np.ndarray, indexes: np
         radix_argsort0_float(array_float, array, indexes, array_offset + bins[i - 1], bins[i] - bins[i - 1], shift)
 
 
-def radix_argsort(array: np.ndarray, unicode=True):
-    indexes = np.arange(array.shape[0], dtype=int)
+@njit(cache=NUMBA_CACHE)
+def cmp_mix(array_list: List[np.ndarray], dts: List[int], array_index: int, l: int, r: int, str_offset=0):
+    if array_index >= len(array_list):
+        return 0
+    array = array_list[array_index]
+    dtype = dts[array_index]
+    if dtype == dtypes.ARRAY_TYPE_INT64:
+        array_int64 = array.view(np.int64)
+        val_l = array_int64[l]
+        val_r = array_int64[r]
+        if val_l < val_r:
+            return -1
+        if val_l > val_r:
+            return 1
+        return cmp_mix(array_list, dts, array_index + 1, l, r)
+    if dtype == dtypes.ARRAY_TYPE_FLOAT64:
+        array_float64 = array.view(np.float64)
+        val_l = array_float64[l]
+        val_r = array_float64[r]
+        nan_l = np.isnan(val_l)
+        nan_r = np.isnan(val_r)
+        if nan_l and not nan_r or val_l > val_r:
+            return 1
+        if nan_r and not nan_l or val_l < val_r:
+            return -1
+        return cmp_mix(array_list, dts, array_index + 1, l, r)
+    if (dtype & dtypes.STRING_TYPE_OFFSET_MAST) == dtypes.ARRAY_TYPE_STRING:
+        str_length = dtype >> dtypes.STRING_TYPE_OFFSET_BITS
+        array_str = array.view(np.uint32)
+        for i in range(str_offset, str_length):
+            val_l = array_str[i + l * str_length]
+            val_r = array_str[i + r * str_length]
+            if val_l < val_r:
+                return -1
+            if val_l > val_r:
+                return 1
+            if val_l == 0:
+                break
+        return cmp_mix(array_list, dts, array_index + 1, l, r)
+
+
+@njit(cache=NUMBA_CACHE)
+def insertion_argsort0(array_list: List[np.ndarray], array_type_list: List[int], array_index: int,
+                       indexes: np.ndarray, array_offset: int, array_length: int, str_offset=0):
+    for i in range(array_offset + 1, array_offset + array_length):
+        val = indexes[i]
+        j = i
+        while j > array_offset and cmp_mix(array_list, array_type_list, array_index,
+                                           val, indexes[j - 1], str_offset) < 0:
+            indexes[j] = indexes[j - 1]
+            j -= 1
+        indexes[j] = val
+
+
+@njit(cache=NUMBA_CACHE)
+def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int], array_index: int,
+                       indexes: np.ndarray, array_offset: int, array_length: int):
+    if array_index >= len(array_list):
+        return
+    if array_length < INSERTION_SORT_LIMIT:
+        return insertion_argsort0(array_list, array_type_list, array_index, indexes, array_offset, array_length)
+    array = array_list[array_index]
+    dtype = array_type_list[array_index]
+    if dtype == dtypes.ARRAY_TYPE_INT64:
+        return radix_argsort0_int(array_list, array_type_list, array_index, array.view(np.int64),
+                                  indexes, array_offset, array_length)
+    if dtype == dtypes.ARRAY_TYPE_FLOAT64:
+        return None
+    if dtype == dtypes.ARRAY_TYPE_STRING:
+        return None
+
+
+# def get_array_type(array: np.array):
+#     if array.dtype.type in [np.int64, np.int32]:
+#         return ARRAY_TYPE_INT
+#     if array.dtype.type in [np.float32]:
+#         return ARRAY_TYPE_FLOAT32
+#     if array.dtype.type in [np.float64]:
+#         return ARRAY_TYPE_FLOAT64
+#     if array.dtype.type in [np.str_]:
+#         return ARRAY_TYPE_STRING
+#     raise Exception('unsupported dtype: ' + array.dtype)
+
+
+# def radix_argsort_mix(array_list: List[np.ndarray], indexes: np.ndarray = None,
+#                       array_offset: int = 0, array_length: int = 0, array_index: int = 0):
+#     if not array_length:
+#         array_length = len(array_list[0])
+#     if indexes is None:
+#         indexes = np.arange(array_length)
+#     radix_argsort0_mix(array_list, array_index, [get_array_type(a) for a in array_list],
+#                        indexes, array_offset, array_length)
+#     return indexes
+
+
+def radix_argsort(array: np.ndarray, indexes: np.ndarray, unicode=True):
+    if not indexes:
+        indexes = np.arange(array.shape[0], dtype=int)
     if array.dtype in [int]:
-        radix_argsort0(array, indexes, 0, len(array))
+        radix_argsort0_int(array, indexes, 0, len(array))
     elif array.dtype.type in [np.str_]:
         radix_argsort0_str(array.view(np.uint8 if unicode else np.uint32)
                            .reshape(-1, array.itemsize if unicode else array.itemsize // 4), indexes, 0,

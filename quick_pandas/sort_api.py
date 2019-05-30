@@ -1,7 +1,8 @@
 import numpy as np
 
 from quick_pandas import sort, config
-from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
+# from quick_pandas.wrappers.numpy_wrapper import ndarray_wrapper
+ndarray_wrapper = None
 
 
 def radix_argsort(array, unicode=None):
