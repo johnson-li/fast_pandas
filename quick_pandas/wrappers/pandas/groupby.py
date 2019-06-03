@@ -20,27 +20,36 @@ def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
     val_length = len(vals)
     length = len(keys[0])
     indexes = np.arange(length)
-    radix_argsort0_int(keys[0], indexes, 0, length)
+    groups = radix_argsort0_int(keys[0], indexes, 0, length)
     new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
     for i in range(val_length):
         new_vals[i][0] = vals[i][indexes[0]]
     pre_index = 0
-    for i in range(1, length):
+    for start, end, _, _ in groups:
         for k in range(val_length):
-            new_vals[k][i] = vals[k][indexes[i]]
-        same = True
-        for j in range(key_length):
-            key = keys[0]
-            if key[indexes[pre_index]] != key[indexes[i]]:
-                same = False
-                break
-        if not same:
-            for k in range(val_length):
-                res = np.mean(new_vals[k][pre_index: i])
-                for j in range(pre_index, i):
-                    vals[k][indexes[j]] = res
-                    new_vals[k][j] = res
-            pre_index = i
+            for j in range(start, end):
+                new_vals[k][j] = vals[k][indexes[j]]
+            res = np.mean(new_vals[k][start: end])
+            for j in range(start, end):
+                vals[k][indexes[j]] = res
+                new_vals[k][j] = res
+
+    # for i in range(1, length):
+    # for k in range(val_length):
+    #     new_vals[k][i] = vals[k][indexes[i]]
+    # same = True
+    # for j in range(key_length):
+    #     key = keys[0]
+    #     if key[indexes[pre_index]] != key[indexes[i]]:
+    #         same = False
+    #         break
+    # if not same:
+    #     for k in range(val_length):
+    #         res = np.mean(new_vals[k][pre_index: i])
+    #         for j in range(pre_index, i):
+    #             vals[k][indexes[j]] = res
+    #             new_vals[k][j] = res
+    #     pre_index = i
     for k in range(val_length):
         res = np.mean(new_vals[k][pre_index: length])
         for j in range(pre_index, length):
