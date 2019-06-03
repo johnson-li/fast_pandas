@@ -9,7 +9,7 @@ ARRAY_TYPE_INT32 = 3
 ARRAY_TYPE_INT64 = 4
 
 STRING_TYPE_OFFSET_BITS = 8
-STRING_TYPE_OFFSET_MAST = 0xff
+STRING_TYPE_OFFSET_MASK = 0xff
 
 
 def convert_to_uint8(arrays: List[np.ndarray]):

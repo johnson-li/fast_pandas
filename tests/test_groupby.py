@@ -1,4 +1,5 @@
 from unittest import TestCase
+from ext import group_by
 
 from quick_pandas.wrappers.pandas.groupby import *
 
@@ -33,9 +34,21 @@ class TestGroupBy(TestCase):
         print(res)
         print([c, d])
 
+    def test_group(self):
+        data = [np.array([1, 2, 1, 3, 4]),
+                np.array(['a', 'b', 'a', 'a', 'c'])]
+        au8, dts = dtypes.convert_to_uint8(data)
+        groups = group(au8, dts, 0, list(np.arange(len(data[0]))))
+        print(groups)
+
     def test_group_by(self):
         df = self.small_df()
         res = df.groupby(by=['A'], sort=True).transform(np.mean)
         print(res)
         res = group_and_transform(df, ['A', 'B'])
         print(res)
+
+    def test_group_by_ext(self):
+        data = [np.array([1, 2, 1, 3, 4]),
+                np.array(['a', 'b', 'a', 'a', 'c'])]
+        res = group_by.group_and_transform(data)

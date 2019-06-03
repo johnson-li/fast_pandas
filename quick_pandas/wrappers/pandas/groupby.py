@@ -1,10 +1,11 @@
 from typing import List
 
-import numba
 import numpy as np
 import pandas as pd
-from numba import njit
+from numba import njit, types
+from numba.typed import Dict
 
+from quick_pandas import dtypes
 from quick_pandas.sort import radix_argsort0_int
 
 
@@ -47,6 +48,43 @@ def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
             new_vals[k][j] = res
 
     return new_vals
+
+
+int_array = types.int64[:]
+
+
+@njit()
+def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, indexes: List[int]):
+    if keys_index >= len(keys_list):
+        return [indexes]
+    keys = keys_list[keys_index]
+    dtype = keys_dtype[keys_index]
+    if dtype == dtypes.ARRAY_TYPE_INT64:
+        keys_int = keys.view(np.int64)
+        groups_int = Dict.empty(key_type=types.int64, value_type=int_array)
+        for index in indexes:
+            key = keys_int[index]
+            key = types.int64(0)
+            groups_int.setdefault(key, [])
+            print(groups_int[0])
+            groups_int[0] += [index]
+        res = []
+        for val in groups_int.values():
+            res.extend(group(keys_list, keys_dtype, keys_index + 1, val))
+        return res
+    elif dtype == dtypes.ARRAY_TYPE_FLOAT64:
+        keys_float = keys.view(np.float64)
+        groups_float = Dict.empty(key_type=types.float64, value_type=int_array)
+        for index in indexes:
+            key = keys_float[index]
+            groups_float.setdefault(key, [])
+            groups_float[key].append(index)
+        res = []
+        for val in groups_float.values():
+            res.extend(group(keys_list, keys_dtype, keys_index + 1, val))
+        return res
+    elif dtype & dtypes.STRING_TYPE_OFFSET_MASK == dtypes.ARRAY_TYPE_STRING:
+        pass
 
 
 def group_and_transform(df: pd.DataFrame, by: List[str], sort: bool = False):

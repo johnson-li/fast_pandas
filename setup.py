@@ -11,6 +11,7 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 from setuptools.command.test import test as TestCommand
+from Cython.Build import cythonize
 
 
 class PyTest(TestCommand):
@@ -166,4 +167,5 @@ setup(
         'benchmark': BenchmarkCommand,
     },
     tests_require=test_requirements,
+    ext_modules=cythonize(["ext/group_by.pyx"])
 )
