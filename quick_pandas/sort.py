@@ -303,8 +303,6 @@ def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int],
                                         indexes, start, end - start)
             for r in ranges:
                 start, end, array_index, uniform = r
-                (long_ranges if (start - end > INSERTION_SORT_LIMIT and
-                                 array_index < array_list_size) else short_ranges).append(r)
                 if array_index < array_list_size and start - end > INSERTION_SORT_LIMIT:
                     long_ranges.append(r)
                 else:
@@ -314,8 +312,6 @@ def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int],
                                           indexes, start, end - start)
             for r in ranges:
                 start, end, array_index, uniform = r
-                (long_ranges if (start - end > INSERTION_SORT_LIMIT and
-                                 array_index < array_list_size) else short_ranges).append(r)
                 if array_index < array_list_size and start - end > INSERTION_SORT_LIMIT:
                     long_ranges.append(r)
                 else:
@@ -326,8 +322,6 @@ def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int],
                                         indexes, start, end - start, str_length * 4, unicode=False)
             for r in ranges:
                 start, end, array_index, uniform = r
-                (long_ranges if (start - end > INSERTION_SORT_LIMIT and
-                                 array_index < array_list_size) else short_ranges).append(r)
                 if array_index < array_list_size and start - end > INSERTION_SORT_LIMIT:
                     long_ranges.append(r)
                 else:
@@ -336,7 +330,7 @@ def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int],
     for r in short_ranges:
         start, end, array_index, uniform = r
         final_ranges += insertion_argsort0(array_list, array_type_list, array_index, indexes, start, end - start)
-    return final_ranges
+    return final_ranges[1:]
 
 
 # def get_array_type(array: np.array):

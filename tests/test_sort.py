@@ -203,3 +203,18 @@ class TestSort(TestCase):
                 else:
                     self.assertEqual(array[indexes[i]], array_sorted[i])
             self.assertEqual(array_size, sum([r[1] - r[0] for r in ranges]))
+
+    def test_radix_argsort_multiarray(self):
+        arrays = [np.array(['1', '11', '12', '1', '12']), np.array([1, 11, 12, 1, 12]),
+                  np.array([1.1, 2.2, 3.3, 1.1, 1.1])]
+        au8, dts = dtypes.convert_to_uint8(arrays)
+        indexes = np.arange(5)
+        ranges = radix_argsort0_mix(au8, dts, indexes)
+        print(ranges)
+        for array in arrays:
+            print(array[indexes])
+        for i in range(4):
+            self.assertEqual([(0, 2, 0, False), (2, 3, 0, False), (3, 4, 0, False), (4, 5, 0, False)][i], ranges[i])
+        # self.assertEqual(['1', '1', '11', '12', '12'], arrays[0][indexes])
+        # self.assertEqual([1, 1, 11, 12, 12], arrays[1][indexes])
+        # self.assertEqual([1.1, 1.1, 2.2, 1.1, 3.3], arrays[2][indexes])
