@@ -38,11 +38,13 @@ class TestGroupBy(TestCase):
         res1 = df1.groupby(by=by, sort=True).transform(np.mean)
         for b in by:
             res1[b] = df1[b]
-        res2 = group_and_transform(df2, by, targets, inplace=False, sort=False)
+        res2 = group_and_transform(df2, by, targets, np.mean, inplace=False, sort=False)
         print(df1)
         print(res1)
         print(df2)
         print(res2)
+        for t in targets:
+            self.assertTrue((res1[t].values == res2[t].values).all())
 
     def test_group_by_ext(self):
         data = [np.array([1, 2, 1, 3, 4]),

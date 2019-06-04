@@ -1,19 +1,19 @@
 from typing import List
 
-import numpy as np
 import pandas as pd
 from numba import njit, types
 from numba.typed import Dict
 
 from quick_pandas import dtypes
 from quick_pandas.dtypes import convert_to_uint8
+from quick_pandas.np_funcs import *
 from quick_pandas.sort import radix_argsort0_mix
 
 
 @njit()
-def group_and_transform0(keys: List[np.ndarray], dts: List[int], vals: List[np.ndarray], sort=False, inplace=False):
+def group_and_transform0(keys: List[np.ndarray], dts: List[int], vals: List[np.ndarray], length: int, func: int,
+                         sort=False, inplace=False):
     val_length = len(vals)
-    length = len(keys[0])
     indexes = np.arange(length)
     groups = radix_argsort0_mix(keys, dts, indexes)
     new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
@@ -24,7 +24,13 @@ def group_and_transform0(keys: List[np.ndarray], dts: List[int], vals: List[np.n
         for k in range(val_length):
             for j in range(start, end):
                 new_vals[k][j] = vals[k][indexes[j]]
-            res = np.mean(new_vals[k][start: end])
+            res = new_vals[k][0]
+            if func == NP_FUNCS_MEAN:
+                res = np.mean(new_vals[k][start: end])
+            elif func == NP_FUNCS_SUM:
+                res = np.sum(new_vals[k][start: end])
+            elif func == NP_FUNCS_MEDIAN:
+                res = np.median(new_vals[k][start: end])
             for j in range(start, end):
                 res_vals[k][indexes[j]] = res
                 if inplace:
@@ -69,11 +75,15 @@ def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, i
         pass
 
 
-def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], sort: bool = False, inplace=False):
+def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], func: function,
+                        sort: bool = False, inplace=False):
     keys = [df[c].values for c in by]
     values = [df[c].values for c in targets]
     au8, dts = convert_to_uint8(keys)
-    new_vals = group_and_transform0(au8, dts, values, sort=sort, inplace=inplace)
+    func = NP_FUNCS_MAP_REVERSE.get(func, None)
+    if not func:
+        raise Exception('unsupported transform function: %s' % func)
+    new_vals = group_and_transform0(au8, dts, values, len(keys[0]), func, sort=sort, inplace=inplace)
     data = {**dict(zip(by, keys)),
             **dict(zip(targets, new_vals))}
     return pd.DataFrame(data)
