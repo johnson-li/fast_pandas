@@ -69,8 +69,7 @@ def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, i
         pass
 
 
-def group_and_transform(df: pd.DataFrame, by: List[str], sort: bool = False, inplace=False):
-    targets = [name for name in df.columns if name not in by]
+def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], sort: bool = False, inplace=False):
     keys = [df[c].values for c in by]
     values = [df[c].values for c in targets]
     au8, dts = convert_to_uint8(keys)

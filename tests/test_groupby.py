@@ -34,10 +34,11 @@ class TestGroupBy(TestCase):
         df1 = self.large_df()
         df2 = df1.copy()
         by = ['A', 'B', 'E']
+        targets = ['C', 'D']
         res1 = df1.groupby(by=by, sort=True).transform(np.mean)
         for b in by:
             res1[b] = df1[b]
-        res2 = group_and_transform(df2, by, inplace=False, sort=False)
+        res2 = group_and_transform(df2, by, targets, inplace=False, sort=False)
         print(df1)
         print(res1)
         print(df2)
