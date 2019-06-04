@@ -6,25 +6,20 @@ from numba import njit, types
 from numba.typed import Dict
 
 from quick_pandas import dtypes
-from quick_pandas.sort import radix_argsort0_int
+from quick_pandas.dtypes import convert_to_uint8
+from quick_pandas.sort import radix_argsort0_mix
 
 
-@njit()
-def update_value():
-    pass
-
-
-@njit()
 def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
-    key_length = len(keys)
     val_length = len(vals)
     length = len(keys[0])
     indexes = np.arange(length)
-    groups = radix_argsort0_int(keys[0], indexes, 0, length)
+    au8, dts = convert_to_uint8(keys)
+    groups = radix_argsort0_mix(au8, dts, indexes)
+    # groups = []
     new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
     for i in range(val_length):
         new_vals[i][0] = vals[i][indexes[0]]
-    pre_index = 0
     for start, end, _, _ in groups:
         for k in range(val_length):
             for j in range(start, end):
@@ -33,29 +28,6 @@ def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
             for j in range(start, end):
                 vals[k][indexes[j]] = res
                 new_vals[k][j] = res
-
-    # for i in range(1, length):
-    # for k in range(val_length):
-    #     new_vals[k][i] = vals[k][indexes[i]]
-    # same = True
-    # for j in range(key_length):
-    #     key = keys[0]
-    #     if key[indexes[pre_index]] != key[indexes[i]]:
-    #         same = False
-    #         break
-    # if not same:
-    #     for k in range(val_length):
-    #         res = np.mean(new_vals[k][pre_index: i])
-    #         for j in range(pre_index, i):
-    #             vals[k][indexes[j]] = res
-    #             new_vals[k][j] = res
-    #     pre_index = i
-    for k in range(val_length):
-        res = np.mean(new_vals[k][pre_index: length])
-        for j in range(pre_index, length):
-            vals[k][indexes[j]] = res
-            new_vals[k][j] = res
-
     return new_vals
 
 
@@ -100,7 +72,7 @@ def group_and_transform(df: pd.DataFrame, by: List[str], sort: bool = False):
     targets = [name for name in df.columns if name not in by]
     keys = [df[c].values for c in by]
     values = [df[c].values for c in targets]
-    sroted = group_and_transform0(keys, values)
+    group_and_transform0(keys, values)
     data = {**dict(zip(by, keys)),
             **dict(zip(targets, values))}
     res = pd.DataFrame(data)

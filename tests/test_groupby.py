@@ -1,6 +1,6 @@
 from unittest import TestCase
-from ext import group_by
 
+from ext import group_by
 from quick_pandas.wrappers.pandas.groupby import *
 
 SIZE = 1000000
@@ -21,9 +21,9 @@ class TestGroupBy(TestCase):
                              'C': np.random.rand(SIZE),
                              'D': np.random.rand(SIZE)})
 
-    def test_numba(self):
+    def test_group_and_transform(self):
         df = self.small_df()
-        res = df.groupby(by=['A'], sort=True).transform(np.mean)
+        res = df.groupby(by=['A'], sort=False).transform(np.mean)
         res['A'] = df['A']
         res['B'] = df['B']
         print(res)
@@ -43,9 +43,10 @@ class TestGroupBy(TestCase):
 
     def test_group_by(self):
         df = self.small_df()
-        res = df.groupby(by=['A'], sort=True).transform(np.mean)
+        by = ['A']
+        res = df.groupby(by=by, sort=True).transform(np.mean)
         print(res)
-        res = group_and_transform(df, ['A', 'B'])
+        res = group_and_transform(df, by)
         print(res)
 
     def test_group_by_ext(self):
