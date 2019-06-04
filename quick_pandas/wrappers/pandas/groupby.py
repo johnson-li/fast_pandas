@@ -81,7 +81,7 @@ def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], fun
     values = [df[c].values for c in targets]
     au8, dts = convert_to_uint8(keys)
     func = NP_FUNCS_MAP_REVERSE.get(func, None)
-    if not func:
+    if func is None:
         raise Exception('unsupported transform function: %s' % func)
     new_vals = group_and_transform0(au8, dts, values, len(keys[0]), func, sort=sort, inplace=inplace)
     data = {**dict(zip(by, keys)),
