@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 
 import pandas as pd
 from numba import njit, types
@@ -75,7 +75,7 @@ def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, i
         pass
 
 
-def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], func: function,
+def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], func: Callable,
                         sort: bool = False, inplace=False):
     keys = [df[c].values for c in by]
     values = [df[c].values for c in targets]
