@@ -13,7 +13,7 @@ STRING_TYPE_OFFSET_MASK = 0xff
 
 
 def convert_to_uint8(arrays: List[np.ndarray]):
-    return [a.view(np.uint8) for a in arrays], get_dtypes(arrays)
+    return [(a if not a.dtype == object else a.astype(str)).view(np.uint8) for a in arrays], get_dtypes(arrays)
 
 
 def get_dtypes(arrays: List[np.ndarray]):
@@ -21,6 +21,8 @@ def get_dtypes(arrays: List[np.ndarray]):
 
 
 def dtype_numeric(array: np.ndarray):
+    if array.dtype == object:
+        array = array.astype(str)
     dtype = array.dtype
     if dtype.type == np.str_:
         res = ARRAY_TYPE_STRING

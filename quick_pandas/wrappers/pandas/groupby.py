@@ -10,14 +10,14 @@ from quick_pandas.dtypes import convert_to_uint8
 from quick_pandas.sort import radix_argsort0_mix
 
 
-def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
+@njit()
+def group_and_transform0(keys: List[np.ndarray], dts: List[int], vals: List[np.ndarray], sort=False, inplace=False):
     val_length = len(vals)
     length = len(keys[0])
     indexes = np.arange(length)
-    au8, dts = convert_to_uint8(keys)
-    groups = radix_argsort0_mix(au8, dts, indexes)
-    # groups = []
+    groups = radix_argsort0_mix(keys, dts, indexes)
     new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
+    res_vals = [np.empty_like(vals[i]) for i in range(val_length)]
     for i in range(val_length):
         new_vals[i][0] = vals[i][indexes[0]]
     for start, end, _, _ in groups:
@@ -26,16 +26,17 @@ def group_and_transform0(keys: List[np.ndarray], vals: List[np.ndarray]):
                 new_vals[k][j] = vals[k][indexes[j]]
             res = np.mean(new_vals[k][start: end])
             for j in range(start, end):
-                vals[k][indexes[j]] = res
-                new_vals[k][j] = res
-    return new_vals
+                res_vals[k][indexes[j]] = res
+                if inplace:
+                    vals[k][indexes[j]] = res
+    return res_vals
 
 
 int_array = types.int64[:]
 
 
 @njit()
-def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, indexes: List[int]):
+def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, indexes: List[int], inplace=False):
     if keys_index >= len(keys_list):
         return [indexes]
     keys = keys_list[keys_index]
@@ -68,14 +69,12 @@ def group(keys_list: List[np.ndarray], keys_dtype: List[int], keys_index: int, i
         pass
 
 
-def group_and_transform(df: pd.DataFrame, by: List[str], sort: bool = False):
+def group_and_transform(df: pd.DataFrame, by: List[str], sort: bool = False, inplace=False):
     targets = [name for name in df.columns if name not in by]
     keys = [df[c].values for c in by]
     values = [df[c].values for c in targets]
-    group_and_transform0(keys, values)
+    au8, dts = convert_to_uint8(keys)
+    new_vals = group_and_transform0(au8, dts, values, sort=sort, inplace=inplace)
     data = {**dict(zip(by, keys)),
-            **dict(zip(targets, values))}
-    res = pd.DataFrame(data)
-    print(res)
-
-    res = pd.DataFrame(data)
+            **dict(zip(targets, new_vals))}
+    return pd.DataFrame(data)

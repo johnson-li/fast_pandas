@@ -3,14 +3,14 @@ from unittest import TestCase
 from ext import group_by
 from quick_pandas.wrappers.pandas.groupby import *
 
-SIZE = 1000000
-RANGE = 100
+SIZE = 1000
+RANGE = 10
 
 
 class TestGroupBy(TestCase):
     def small_df(self):
         a = np.array([1, 1, 3, 3, 3, 1])
-        b = np.array([1, 1, 2, 2, 1, 1])
+        b = np.array([1, 1, 2, 2, 10, 1])
         c = np.array([11, 22, 33, 44, 55, 66])
         d = np.array([111, 222, 333, 444, 555, 666])
         return pd.DataFrame({'A': a, 'B': b, 'C': c, 'D': d})
@@ -19,20 +19,9 @@ class TestGroupBy(TestCase):
         return pd.DataFrame({'A': np.random.randint(0, RANGE, SIZE),
                              'B': np.random.randint(0, RANGE, SIZE),
                              'C': np.random.rand(SIZE),
-                             'D': np.random.rand(SIZE)})
-
-    def test_group_and_transform(self):
-        df = self.small_df()
-        res = df.groupby(by=['A'], sort=False).transform(np.mean)
-        res['A'] = df['A']
-        res['B'] = df['B']
-        print(res)
-        a, b = [df[c].values for c in ['A', 'B']]
-        c, d = [df[c].values for c in ['C', 'D']]
-        indexes = [a, b]
-        res = group_and_transform0(indexes, [c, d])
-        print(res)
-        print([c, d])
+                             'D': np.random.rand(SIZE),
+                             'E': np.random.randint(0, 2, SIZE).astype(str),
+                             })
 
     def test_group(self):
         data = [np.array([1, 2, 1, 3, 4]),
@@ -42,12 +31,17 @@ class TestGroupBy(TestCase):
         print(groups)
 
     def test_group_by(self):
-        df = self.small_df()
-        by = ['A']
-        res = df.groupby(by=by, sort=True).transform(np.mean)
-        print(res)
-        res = group_and_transform(df, by)
-        print(res)
+        df1 = self.large_df()
+        df2 = df1.copy()
+        by = ['A', 'B', 'E']
+        res1 = df1.groupby(by=by, sort=True).transform(np.mean)
+        for b in by:
+            res1[b] = df1[b]
+        res2 = group_and_transform(df2, by, inplace=False, sort=False)
+        print(df1)
+        print(res1)
+        print(df2)
+        print(res2)
 
     def test_group_by_ext(self):
         data = [np.array([1, 2, 1, 3, 4]),
