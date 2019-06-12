@@ -127,6 +127,8 @@ class UploadCommand(Command):
         sys.exit()
 
 
+ext_modules = ['ext/%s' % file for file in os.listdir('ext') if file.endswith('.pyx')]
+
 # Where the magic happens:
 setup(
     name=NAME,
@@ -167,5 +169,5 @@ setup(
         'benchmark': BenchmarkCommand,
     },
     tests_require=test_requirements,
-    ext_modules=cythonize(["ext/group_by.pyx"])
+    ext_modules=cythonize(ext_modules, annotate=True)
 )

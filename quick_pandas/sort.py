@@ -295,7 +295,7 @@ def radix_argsort0_mix(array_list: List[np.ndarray], array_type_list: List[int],
     long_ranges = [(0, array_size, 0, False)]
     short_ranges = []
     while long_ranges:
-        start, end, array_index, _ = long_ranges.pop(0)
+        start, end, array_index, _ = long_ranges.pop(-1)
         array = array_list[array_index]
         dtype = array_type_list[array_index]
         if dtype == dtypes.ARRAY_TYPE_INT64:

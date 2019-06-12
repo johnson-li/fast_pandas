@@ -16,25 +16,25 @@ def group_and_transform0(keys: List[np.ndarray], dts: List[int], vals: List[np.n
     val_length = len(vals)
     indexes = np.arange(length)
     groups = radix_argsort0_mix(keys, dts, indexes)
-    new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
+    # new_vals = [np.empty_like(vals[i]) for i in range(val_length)]
     res_vals = [np.empty_like(vals[i]) for i in range(val_length)]
-    for i in range(val_length):
-        new_vals[i][0] = vals[i][indexes[0]]
-    for start, end, _, _ in groups:
-        for k in range(val_length):
-            for j in range(start, end):
-                new_vals[k][j] = vals[k][indexes[j]]
-            res = new_vals[k][0]
-            if func == NP_FUNCS_MEAN:
-                res = np.mean(new_vals[k][start: end])
-            elif func == NP_FUNCS_SUM:
-                res = np.sum(new_vals[k][start: end])
-            elif func == NP_FUNCS_MEDIAN:
-                res = np.median(new_vals[k][start: end])
-            for j in range(start, end):
-                res_vals[k][indexes[j]] = res
-                if inplace:
-                    vals[k][indexes[j]] = res
+    # for i in range(val_length):
+    #     new_vals[i][0] = vals[i][indexes[0]]
+    # for start, end, _, _ in groups:
+    #     for k in range(val_length):
+    #         for j in range(start, end):
+    #             new_vals[k][j] = vals[k][indexes[j]]
+    #         res = new_vals[k][0]
+    #         if func == NP_FUNCS_MEAN:
+    #             res = np.mean(new_vals[k][start: end])
+    #         elif func == NP_FUNCS_SUM:
+    #             res = np.sum(new_vals[k][start: end])
+    #         elif func == NP_FUNCS_MEDIAN:
+    #             res = np.median(new_vals[k][start: end])
+    #         for j in range(start, end):
+    #             res_vals[k][indexes[j]] = res
+    #             if inplace:
+    #                 vals[k][indexes[j]] = res
     return res_vals
 
 
