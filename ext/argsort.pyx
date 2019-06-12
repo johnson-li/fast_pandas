@@ -91,22 +91,6 @@ cdef int compare(unsigned char **arrays, int[::1] dtypes,
         array_index += 1
     return 0
 
-cdef int[::1] unwrap_arrays(arrays: List[np.ndarray], unsigned char **c_arrays):
-    data, dtypes = convert_to_uint8(arrays)
-    cdef int[::1] dtypes_mem = np.array(dtypes, dtype=np.int32)
-    cdef unsigned char[::1] mem
-    for i in range(len(arrays)):
-        mem = data[i]
-        c_arrays[i] = &mem[0]
-    return dtypes_mem
-
-def compare_py(arrays: List[np.ndarray], l: int, r: int):
-    cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
-    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
-    res = compare(c_arrays, dtypes_mem, len(arrays), 0, l, r)
-    free(c_arrays)
-    return res
-
 
 cdef void insertion_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_length,
                             int[::1] indexes, int array_index, int array_offset, int array_length) nogil:
@@ -118,15 +102,6 @@ cdef void insertion_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_
             indexes[j] = indexes[j - 1]
             j -= 1
         indexes[j] = tmp
-
-
-def insertion_argsort_py(arrays: List[np.ndarray]):
-    cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
-    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
-    indexes = np.arange(len(arrays[0]), dtype=np.int32)
-    insertion_argsort(c_arrays, dtypes_mem, len(arrays), indexes, 0, 0, len(arrays[0]))
-    free(c_arrays)
-    return indexes
 
 
 cdef void radix_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_length,
@@ -340,10 +315,36 @@ cdef void radix_argsort_string(uchar **arrays, int[::1] dtypes, int arrays_lengt
     free(bins)
 
 
+cdef int[::1] unwrap_arrays(arrays: List[np.ndarray], unsigned char **c_arrays):
+    data, dtypes = convert_to_uint8(arrays)
+    cdef int[::1] dtypes_mem = np.array(dtypes, dtype=np.int32)
+    cdef unsigned char[::1] mem
+    for i in range(len(arrays)):
+        mem = data[i]
+        c_arrays[i] = &mem[0]
+    return dtypes_mem
+
+
 def radix_argsort_py(arrays: List[np.ndarray]):
     cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
     cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
     indexes = np.arange(len(arrays[0]), dtype=np.int32)
     radix_argsort(c_arrays, dtypes_mem, len(arrays), indexes, 0, 0, len(arrays[0]))
+    free(c_arrays)
+    return indexes
+
+
+def compare_py(arrays: List[np.ndarray], l: int, r: int):
+    cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
+    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
+    res = compare(c_arrays, dtypes_mem, len(arrays), 0, l, r)
+    free(c_arrays)
+    return res
+
+def insertion_argsort_py(arrays: List[np.ndarray]):
+    cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
+    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
+    indexes = np.arange(len(arrays[0]), dtype=np.int32)
+    insertion_argsort(c_arrays, dtypes_mem, len(arrays), indexes, 0, 0, len(arrays[0]))
     free(c_arrays)
     return indexes
