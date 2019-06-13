@@ -9,9 +9,9 @@ import os
 import sys
 from shutil import rmtree
 
+from Cython.Build import cythonize
 from setuptools import find_packages, setup, Command
 from setuptools.command.test import test as TestCommand
-from Cython.Build import cythonize
 
 
 class PyTest(TestCommand):
@@ -162,6 +162,7 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy'
     ],
+    platforms=['Linux'],
     # $ setup.py publish support.
     cmdclass={
         'upload': UploadCommand,
