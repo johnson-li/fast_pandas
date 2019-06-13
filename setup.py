@@ -9,9 +9,9 @@ import os
 import sys
 from shutil import rmtree
 
-from Cython.Build import cythonize
 from setuptools import find_packages, setup, Command
 from setuptools.command.test import test as TestCommand
+from Cython.Build import cythonize
 
 
 class PyTest(TestCommand):
