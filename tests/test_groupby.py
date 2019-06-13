@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ext import group_by
+import ext.group_by
 from quick_pandas.wrappers.pandas.groupby import *
 
 SIZE = 1000
@@ -9,11 +9,12 @@ RANGE = 10
 
 class TestGroupBy(TestCase):
     def small_df(self):
-        a = np.array([1, 1, 3, 3, 3, 1])
-        b = np.array([1, 1, 2, 2, 10, 1])
-        c = np.array([11, 22, 33, 44, 55, 66])
-        d = np.array([111, 222, 333, 444, 555, 666])
-        return pd.DataFrame({'A': a, 'B': b, 'C': c, 'D': d})
+        a = np.array([1, 1, 3, 3, 3, 1], dtype=float)
+        b = np.array([1, 1, 2, 2, 10, 1], dtype=float)
+        c = np.array([11, 22, 33, 44, 55, 66], dtype=float)
+        d = np.array([111, 222, 333, 444, 555, 666], dtype=float)
+        e = np.array([1, 1, 3, 3, 3, 1]).astype(str)
+        return pd.DataFrame({'A': a, 'B': b, 'C': c, 'D': d, 'E': e})
 
     def large_df(self):
         return pd.DataFrame({'A': np.random.randint(0, RANGE, SIZE),
@@ -42,6 +43,21 @@ class TestGroupBy(TestCase):
             self.assertTrue((res1[t].values == res2[t].values).all())
 
     def test_group_by_ext(self):
-        data = [np.array([1, 2, 1, 3, 4]),
-                np.array(['a', 'b', 'a', 'a', 'c'])]
-        # res = group_by.group_and_transform(data)
+        df1 = self.small_df()
+        df2 = df1.copy()
+        by = ['A', 'B', 'E']
+        targets = ['C', 'D']
+        res1 = df1.groupby(by=by, sort=True).transform(np.mean)
+        for b in by:
+            res1[b] = df1[b]
+        print(res1)
+        res2 = ext.group_by.group_and_transform(df2, by, targets, np.mean, inplace=False, sort=False)
+        print(res2)
+        for t in targets:
+            self.assertTrue((res1[t].values == res2[t].values).all())
+
+    def test_transform(self):
+        array = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        res = ext.group_by.transform_py([array], [(0, 3), (3, 8), (8, 9)],
+                                        np.arange(len(array)).astype(np.int32), np.mean)
+        self.assertEqual([2, 2, 2, 6, 6, 6, 6, 6, 9], res[0].tolist())

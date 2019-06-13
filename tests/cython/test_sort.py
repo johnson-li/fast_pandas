@@ -96,3 +96,5 @@ class TestSort(TestCase):
         ]
         indexes = ext.argsort.radix_argsort_py(array).tolist()
         self.assertEqual([4, 3, 1, 0, 2], indexes)
+        ext.argsort.radix_argsort_py([np.random.randint(-100, 100, 10000),
+                                      np.random.random(10000) * 100, np.random.randint(0, 10000, 1000).astype(str)])
