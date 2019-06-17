@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from ext import example
+from quick_pandas.ext import example
 
 
 def compute_np(array_1, array_2, a, b, c):

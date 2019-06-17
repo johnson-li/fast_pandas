@@ -127,7 +127,7 @@ class UploadCommand(Command):
         sys.exit()
 
 
-ext_modules = ['ext/%s' % file for file in os.listdir('ext') if file.endswith('.pyx')]
+ext_modules = ['quick_pandas/ext/%s' % file for file in os.listdir('quick_pandas/ext') if file.endswith('.pyx')]
 
 # Where the magic happens:
 setup(

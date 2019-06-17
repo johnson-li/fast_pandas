@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from quick_pandas.wrappers.pandas.groupby import group_and_transform
+from quick_pandas.api.pandas import group_and_transform
 
 RANGE = 10
 SIZE = 100000

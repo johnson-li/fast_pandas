@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-import ext.group_by
 from quick_pandas.wrappers.pandas.groupby import *
 
 SIZE = 1000
@@ -51,13 +50,13 @@ class TestGroupBy(TestCase):
         for b in by:
             res1[b] = df1[b]
         print(res1)
-        res2 = ext.group_by.group_and_transform(df2, by, targets, np.mean, inplace=False, sort=False)
+        res2 = quick_pandas.ext.group_by.group_and_transform(df2, by, targets, np.mean, inplace=False, sort=False)
         print(res2)
         for t in targets:
             self.assertTrue((res1[t].values == res2[t].values).all())
 
     def test_transform(self):
         array = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
-        res = ext.group_by.transform_py([array], [(0, 3), (3, 8), (8, 9)],
-                                        np.arange(len(array)).astype(np.int32), np.mean)
+        res = quick_pandas.ext.group_by.transform_py([array], [(0, 3), (3, 8), (8, 9)],
+                                                     np.arange(len(array)).astype(np.int32), np.mean)
         self.assertEqual([2, 2, 2, 6, 6, 6, 6, 6, 9], res[0].tolist())

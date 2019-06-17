@@ -2,6 +2,7 @@
 # You can ignore the previous line.
 # It's for internal testing of the cython documentation.
 
+# cython: language_level=3
 # distutils: extra_compile_args=-fopenmp
 # distutils: extra_link_args=-fopenmp
 
