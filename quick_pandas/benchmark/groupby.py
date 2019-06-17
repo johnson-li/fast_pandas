@@ -6,7 +6,7 @@ import pandas as pd
 from quick_pandas.api.pandas import group_and_transform
 
 RANGE = 10
-SIZE = 100000
+SIZE = 1000000
 REPEAT = 5
 
 
