@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from quick_pandas.api.pandas import group_and_transform
+from quick_pandas.api.pandas import group_and_transform, radix_argsort_py
 
 RANGE = 10
 SIZE = 10000000
@@ -11,17 +11,17 @@ REPEAT = 5
 
 
 def group_by():
-    df = pd.DataFrame({'A': np.random.randint(0, RANGE, SIZE),
-                       'B': np.random.randint(0, 2, SIZE),
-                       'D': np.random.rand(SIZE),
-                       'E': np.random.randint(0, 2, SIZE).astype(str),
-                       })
-    by = ['A', 'B', 'E']
+    df = pd.DataFrame({'A': np.random.randint(-RANGE, RANGE, SIZE),
+                       'D': np.random.rand(SIZE)})
+    by = ['A']
     targets = ['D']
     for i in range(REPEAT):
         ts = time.time()
-        df.groupby(by=by, sort=True)['D'].transform(np.mean)
+        df.groupby(by=by, sort=False)['D'].transform(np.mean)
         print('Pandas group and transform takes %fs' % (time.time() - ts))
+        ts = time.time()
+        radix_argsort_py([df['A'].values]) 
+        print('quick-pandas sort takes %fs' % (time.time() - ts))
         ts = time.time()
         group_and_transform(df, by, targets, np.mean)
         print('quick-pandas group and transform takes %fs' % (time.time() - ts))
