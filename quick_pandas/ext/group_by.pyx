@@ -18,7 +18,7 @@ ctypedef fused numeric:
 cdef int C_NP_FUNCS_SUM = NP_FUNCS_SUM
 cdef int C_NP_FUNCS_MEAN = NP_FUNCS_MEAN
 
-cdef numeric mean0(numeric *values_c, int[::1] indexes, int start, int end) nogil:
+cdef inline numeric mean0(numeric *values_c, int[::1] indexes, int start, int end) nogil:
     cdef numeric res = 0
     cdef int i
     for i in range(start, end):
@@ -26,13 +26,12 @@ cdef numeric mean0(numeric *values_c, int[::1] indexes, int start, int end) nogi
     return <numeric>(res / (end - start))
 
 
-cdef numeric sum0(numeric *values_c, int[::1] indexes, int start, int end) nogil:
+cdef inline numeric sum0(numeric *values_c, int[::1] indexes, int start, int end) nogil:
     cdef numeric res = 0
     cdef int i
     for i in range(start, end):
         res += values_c[indexes[i]]
     return res
-
 
 
 cdef void transform(uchar **values_c, int[::1] values_types, int* range_start, int* range_end, int range_size,
