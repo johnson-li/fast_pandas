@@ -6,22 +6,21 @@ import pandas as pd
 from quick_pandas.api.pandas import group_and_transform
 
 RANGE = 10
-SIZE = 100000
+SIZE = 10000000
 REPEAT = 5
 
 
 def group_by():
     df = pd.DataFrame({'A': np.random.randint(0, RANGE, SIZE),
                        'B': np.random.randint(0, 2, SIZE),
-                       'C': np.random.rand(SIZE),
                        'D': np.random.rand(SIZE),
                        'E': np.random.randint(0, 2, SIZE).astype(str),
                        })
-    by = ['A', 'B']
+    by = ['A', 'B', 'E']
     targets = ['D']
     for i in range(REPEAT):
         ts = time.time()
-        df.groupby(by=by, sort=True).transform(np.mean)
+        df.groupby(by=by, sort=True)['D'].transform(np.mean)
         print('Pandas group and transform takes %fs' % (time.time() - ts))
         ts = time.time()
         group_and_transform(df, by, targets, np.mean)
