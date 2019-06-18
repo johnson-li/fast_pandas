@@ -7,7 +7,7 @@ from typing import List, Callable
 
 import pandas as pd
 
-from argsort cimport radix_argsort, unwrap_arrays, compare, C_ARRAY_TYPE_INT64, C_ARRAY_TYPE_FLOAT64
+from quick_pandas.ext.argsort cimport radix_argsort, unwrap_arrays, compare, C_ARRAY_TYPE_INT64, C_ARRAY_TYPE_FLOAT64
 from libc.stdlib cimport malloc, free
 from quick_pandas.np_funcs import *
 
