@@ -9,6 +9,7 @@ import pandas as pd
 
 from quick_pandas.ext.argsort cimport radix_argsort, unwrap_arrays, compare, C_ARRAY_TYPE_INT64, C_ARRAY_TYPE_FLOAT64
 from libc.stdlib cimport malloc, free
+from libc.stdio cimport printf
 from quick_pandas.np_funcs import *
 
 ctypedef unsigned char uchar
@@ -71,9 +72,9 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     array_length = len(keys[0])
     arrays_length = len(keys)
     cdef unsigned char **c_arrays = <unsigned char **> malloc(len(keys) * sizeof(unsigned char *))
-    indexes = np.arange(len(keys[0]), dtype=np.int32)
+    cdef int[::1] indexes = np.arange(len(keys[0]), dtype=np.int32)
     cdef int[::1] dtypes_mem = unwrap_arrays(keys, c_arrays)
-    radix_argsort(c_arrays, dtypes_mem, len(keys), indexes, 0, 0, len(keys[0]))
+    radix_argsort(c_arrays, dtypes_mem, array_length, indexes, 0, 0, array_length)
     cdef int i, range_size = 0, start, end
     cdef int* range_start = <int *> malloc(array_length * sizeof(int *))
     cdef int* range_end = <int *> malloc(array_length * sizeof(int *))
