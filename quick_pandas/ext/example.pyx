@@ -52,3 +52,20 @@ def compute(my_type[:, ::1] array_1, my_type[:, ::1] array_2, my_type a, my_type
             result_view[x, y] = tmp + c
 
     return result
+
+cdef int func_out(int *data, int length, TRANSFORM f) nogil:
+    return f(data, length)
+
+
+cdef int func_in(int *data, int length) nogil:
+    cdef int i, s = 0
+    for i in range(length):
+        s += data[i]
+    return s
+
+def test():
+    cdef int[::1] data = np.random.randint(-100, 100, 100).astype(np.int32)
+    cdef TRANSFORM tr = func_in
+    cdef int res = func_out(&data[0], 100, tr)
+    print(res)
+
