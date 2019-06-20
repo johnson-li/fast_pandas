@@ -21,12 +21,14 @@ from quick_pandas.dtypes import ARRAY_TYPE_INT64, ARRAY_TYPE_FLOAT64, ARRAY_TYPE
     STRING_TYPE_OFFSET_BITS, STRING_TYPE_OFFSET_MASK, convert_to_uint8
 
 
+ctypedef unsigned long ulong
+ctypedef unsigned char uchar
 cdef int C_ARRAY_TYPE_INT64 = ARRAY_TYPE_INT64
 cdef int C_ARRAY_TYPE_FLOAT64 = ARRAY_TYPE_FLOAT64
 cdef int C_ARRAY_TYPE_STRING = ARRAY_TYPE_STRING
 cdef int C_STRING_TYPE_OFFSET_BITS = STRING_TYPE_OFFSET_BITS
 cdef int C_STRING_TYPE_OFFSET_MASK = STRING_TYPE_OFFSET_MASK
-cdef int INSERTION_SORT_LIMIT = 0
+cdef int INSERTION_SORT_LIMIT = 64
 cdef int RADIX_BITS = 8
 
 
@@ -77,7 +79,7 @@ cdef int compare0(const unsigned char* array, int dtype, int l, int r) nogil:
     return -2
 
 
-cdef int compare(unsigned char **arrays, int[::1] dtypes,
+cdef int compare(unsigned char **arrays, int *dtypes,
                  int array_length, int array_index, int l, int r) nogil:
     cdef int res = 0
     cdef int dtype = 0
@@ -92,9 +94,16 @@ cdef int compare(unsigned char **arrays, int[::1] dtypes,
     return 0
 
 
-cdef void insertion_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_length,
-                            int[::1] indexes, int array_index, int array_offset, int array_length) nogil:
-    cdef int i, j, tmp;
+cdef inline void add_group(int *ranges, int *range_length, int offset) nogil:
+    if ranges != NULL:
+        ranges[range_length[0]] = offset
+        range_length[0] += 1
+
+
+cdef void insertion_argsort(unsigned char **arrays, int *dtypes, int arrays_length,
+                            int *indexes, int array_index, int array_offset, int array_length,
+                            int *ranges, int *range_length) nogil:
+    cdef int i, j, tmp, cmp
     for i in range(array_offset, array_offset + array_length):
         tmp = indexes[i]
         j = i
@@ -102,28 +111,46 @@ cdef void insertion_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_
             indexes[j] = indexes[j - 1]
             j -= 1
         indexes[j] = tmp
+    if ranges != NULL:
+        add_group(ranges, range_length, array_offset)
+        for i in range(array_offset + 1, array_offset + array_length):
+            cmp = compare(arrays, dtypes, arrays_length, array_index, indexes[i - 1], indexes[i])
+            if cmp != 0:
+                add_group(ranges, range_length, i)
 
 
-cdef void radix_argsort(unsigned char **arrays, int[::1] dtypes, int arrays_length,
-                        int[::1] indexes, int array_index, int array_offset, int array_length) nogil:
+cdef void radix_argsort_groups(unsigned char **arrays, int *dtypes, int arrays_length,
+                               int *indexes, int array_index, int array_offset, int array_length,
+                               int *ranges, int *range_length) nogil:
+    radix_argsort(arrays, dtypes, arrays_length, indexes, array_index, 
+                  array_offset, array_length, ranges, range_length)
+    add_group(ranges, range_length, array_length)
+
+
+cdef void radix_argsort(unsigned char **arrays, int *dtypes, int arrays_length,
+                        int *indexes, int array_index, int array_offset, int array_length,
+                        int *ranges, int *range_length) nogil:
     if array_length <= 1 or array_index >= arrays_length:
+        if array_length >= 1:
+            add_group(ranges, range_length, array_offset)
         return
     if array_length <= INSERTION_SORT_LIMIT:
-        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length,
+                          ranges, range_length)
         return
     cdef int dtype = dtypes[array_index], string_length
     if dtype == C_ARRAY_TYPE_INT64:
-        radix_argsort_int(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        radix_argsort_int(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length,
+                          ranges, range_length)
     elif dtype == C_ARRAY_TYPE_FLOAT64:
-        radix_argsort_float(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        radix_argsort_float(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length,
+                            ranges, range_length)
     elif dtype & C_STRING_TYPE_OFFSET_MASK == C_ARRAY_TYPE_STRING:
         string_length = dtype >> C_STRING_TYPE_OFFSET_BITS
         radix_argsort_string(arrays, dtypes, arrays_length, indexes,
-                             array_index, array_offset, array_length, 0, string_length * 4)
+                             array_index, array_offset, array_length, 0, string_length * 4,
+                             ranges, range_length)
 
-
-ctypedef unsigned long ulong
-ctypedef unsigned char uchar
 
 cdef inline ulong convert_float(ulong a) nogil:
     if a & 0x8000000000000000l == 0:
@@ -131,12 +158,16 @@ cdef inline ulong convert_float(ulong a) nogil:
     return a ^ 0xffffffffffffffffl
 
 
-cdef void radix_argsort_float(unsigned char **arrays, int[::1] dtypes, int arrays_length, int[::1] indexes,
-                            int array_index, int array_offset, int array_length) nogil:
+cdef void radix_argsort_float(unsigned char **arrays, int *dtypes, int arrays_length, int *indexes,
+                            int array_index, int array_offset, int array_length,
+                            int *ranges, int *range_length) nogil:
     if array_length <= 1 or array_index >= arrays_length:
+        if array_length >= 1:
+            add_group(ranges, range_length, array_offset)
         return
     if array_length <= INSERTION_SORT_LIMIT:
-        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, 
+                          array_offset, array_length, ranges, range_length)
         return
     cdef int i, index
     cdef ulong val
@@ -183,20 +214,26 @@ cdef void radix_argsort_float(unsigned char **arrays, int[::1] dtypes, int array
     if shift == 0:
         for i in range(1, bin_length + 1):
             radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1,
-                          array_offset + bins[i - 1], bins[i] - bins[i - 1])
+                          array_offset + bins[i - 1], bins[i] - bins[i - 1],
+                          ranges, range_length)
     else:
         for i in range(1, bin_length + 1):
-            radix_argsort_int(arrays, dtypes, arrays_length, indexes, array_index,
-                              array_offset + bins[i - 1], bins[i] - bins[i - 1])
+            radix_argsort_float(arrays, dtypes, arrays_length, indexes, array_index,
+                                array_offset + bins[i - 1], bins[i] - bins[i - 1],
+                                ranges, range_length)
     free(bins)
 
 
-cdef void radix_argsort_int(unsigned char **arrays, int[::1] dtypes, int arrays_length, int[::1] indexes,
-                            int array_index, int array_offset, int array_length) nogil:
+cdef void radix_argsort_int(unsigned char **arrays, int *dtypes, int arrays_length, int *indexes,
+                            int array_index, int array_offset, int array_length,
+                            int *ranges, int *range_length) nogil:
     if array_length <= 1 or array_index >= arrays_length:
+        if array_length >= 1:
+            add_group(ranges, range_length, array_offset)
         return
     if array_length <= INSERTION_SORT_LIMIT:
-        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, 
+                          array_offset, array_length, ranges, range_length)
         return
     cdef int i, index
     cdef long val
@@ -244,24 +281,31 @@ cdef void radix_argsort_int(unsigned char **arrays, int[::1] dtypes, int arrays_
     if shift == 0:
         for i in range(1, bin_length + 1):
             radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1,
-                          array_offset + bins[i - 1], bins[i] - bins[i - 1])
+                          array_offset + bins[i - 1], bins[i] - bins[i - 1], 
+                          ranges, range_length)
     else:
         for i in range(1, bin_length + 1):
             radix_argsort_int(arrays, dtypes, arrays_length, indexes, array_index,
-                              array_offset + bins[i - 1], bins[i] - bins[i - 1])
+                              array_offset + bins[i - 1], bins[i] - bins[i - 1],
+                              ranges, range_length)
     free(bins)
 
 
-cdef void radix_argsort_string(uchar **arrays, int[::1] dtypes, int arrays_length, int[::1] indexes,
+cdef void radix_argsort_string(uchar **arrays, int *dtypes, int arrays_length, int *indexes,
                                int array_index, int array_offset, int array_length,
-                               int string_offset, int string_length) nogil:
+                               int string_offset, int string_length,
+                               int *ranges, int *range_length) nogil:
     if array_length <= 1 or array_index >= arrays_length:
+        if array_length >= 1:
+            add_group(ranges, range_length, array_offset)
         return
     if string_offset >= string_length:
-        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, array_offset, array_length)
+        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, 
+                      array_offset, array_length, ranges, range_length)
         return
     if array_length <= INSERTION_SORT_LIMIT:
-        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, array_offset, array_length)
+        insertion_argsort(arrays, dtypes, arrays_length, indexes, array_index, 
+                          array_offset, array_length, ranges, range_length)
         return
     cdef uchar* array = <uchar*> arrays[array_index]
     cdef uchar min_val = array[indexes[array_offset] * string_length + string_offset]
@@ -274,7 +318,8 @@ cdef void radix_argsort_string(uchar **arrays, int[::1] dtypes, int arrays_lengt
         min_val = min(min_val, val)
     cdef ulong val_range = max_val - min_val
     if val_range == 0 and max_val == 0:
-        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, array_offset, array_length)
+        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, 
+                      array_offset, array_length, ranges, range_length)
         return
     cdef int value_bits = 8,
     cdef int div = value_bits // 2
@@ -307,44 +352,47 @@ cdef void radix_argsort_string(uchar **arrays, int[::1] dtypes, int arrays_lengt
     free(indexes_new)
     cdef int start = 1
     if min_val == 0:
-        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, array_offset + bins[0], bins[1] - bins[0])
+        radix_argsort(arrays, dtypes, arrays_length, indexes, array_index + 1, 
+                      array_offset + bins[0], bins[1] - bins[0], ranges, range_length)
         start = 2
     for i in range(start, bin_length + 1):
         radix_argsort_string(arrays, dtypes, arrays_length, indexes, array_index,
-                             array_offset + bins[i - 1], bins[i] - bins[i - 1], string_offset + 4, string_length)
+                             array_offset + bins[i - 1], bins[i] - bins[i - 1], 
+                             string_offset + 4, string_length, ranges, range_length)
     free(bins)
 
 
-cdef int[::1] unwrap_arrays(arrays: List[np.ndarray], unsigned char **c_arrays):
+cdef int* unwrap_arrays(arrays: List[np.ndarray], unsigned char **c_arrays):
     data, dtypes = convert_to_uint8(arrays)
     cdef int[::1] dtypes_mem = np.array(dtypes, dtype=np.int32)
     cdef unsigned char[::1] mem
     for i in range(len(arrays)):
         mem = data[i]
         c_arrays[i] = &mem[0]
-    return dtypes_mem
+    return &dtypes_mem[0]
 
 
 def radix_argsort_py(arrays: List[np.ndarray]):
     cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
-    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
-    indexes = np.arange(len(arrays[0]), dtype=np.int32)
-    radix_argsort(c_arrays, dtypes_mem, len(arrays), indexes, 0, 0, len(arrays[0]))
+    cdef int *dtypes_mem = unwrap_arrays(arrays, c_arrays)
+    cdef int[::1] indexes = np.arange(len(arrays[0]), dtype=np.int32)
+    radix_argsort(c_arrays, dtypes_mem, len(arrays), &indexes[0], 0, 0, len(arrays[0]), NULL, NULL)
     free(c_arrays)
     return indexes
 
 
 def compare_py(arrays: List[np.ndarray], l: int, r: int):
     cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
-    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
+    cdef int *dtypes_mem = unwrap_arrays(arrays, c_arrays)
     res = compare(c_arrays, dtypes_mem, len(arrays), 0, l, r)
     free(c_arrays)
     return res
 
 def insertion_argsort_py(arrays: List[np.ndarray]):
     cdef unsigned char **c_arrays = <unsigned char **> malloc(len(arrays) * sizeof(unsigned char *))
-    cdef int[::1] dtypes_mem = unwrap_arrays(arrays, c_arrays)
-    indexes = np.arange(len(arrays[0]), dtype=np.int32)
-    insertion_argsort(c_arrays, dtypes_mem, len(arrays), indexes, 0, 0, len(arrays[0]))
+    cdef int *dtypes_mem = unwrap_arrays(arrays, c_arrays)
+    cdef int[::1] indexes = np.arange(len(arrays[0]), dtype=np.int32)
+    insertion_argsort(c_arrays, dtypes_mem, len(arrays), &indexes[0], 0, 0, len(arrays[0]), NULL, NULL)
     free(c_arrays)
     return indexes
+

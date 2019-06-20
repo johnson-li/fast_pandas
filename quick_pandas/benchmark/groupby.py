@@ -5,8 +5,8 @@ import pandas as pd
 
 from quick_pandas.api.pandas import group_and_transform, radix_argsort_py
 
-RANGE = 10
-SIZE = 10000000
+RANGE = 1000000000
+SIZE = 7000000
 REPEAT = 1
 
 
@@ -15,6 +15,7 @@ def group_by():
                        'D': np.random.rand(SIZE)})
     by = ['A']
     targets = ['D']
+    print('dataframe is ready')
     for i in range(REPEAT):
         ts = time.time()
         df.groupby(by=by, sort=False)['D'].transform(np.mean)
