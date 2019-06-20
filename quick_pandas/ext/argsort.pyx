@@ -14,20 +14,14 @@ from libc.stdlib cimport malloc, free
 from libc.stdio cimport printf
 from libc.math cimport isnan
 from cython.parallel import prange
+from quick_pandas.dtypes import convert_to_uint8
 
 import numpy as np
 
-from quick_pandas.dtypes import ARRAY_TYPE_INT64, ARRAY_TYPE_FLOAT64, ARRAY_TYPE_STRING, \
-    STRING_TYPE_OFFSET_BITS, STRING_TYPE_OFFSET_MASK, convert_to_uint8
 
 
 ctypedef unsigned long ulong
 ctypedef unsigned char uchar
-cdef int C_ARRAY_TYPE_INT64 = ARRAY_TYPE_INT64
-cdef int C_ARRAY_TYPE_FLOAT64 = ARRAY_TYPE_FLOAT64
-cdef int C_ARRAY_TYPE_STRING = ARRAY_TYPE_STRING
-cdef int C_STRING_TYPE_OFFSET_BITS = STRING_TYPE_OFFSET_BITS
-cdef int C_STRING_TYPE_OFFSET_MASK = STRING_TYPE_OFFSET_MASK
 cdef int INSERTION_SORT_LIMIT = 64
 cdef int RADIX_BITS = 8
 

@@ -7,64 +7,58 @@ from typing import List, Callable
 
 import pandas as pd
 
-from quick_pandas.ext.argsort cimport radix_argsort, radix_argsort_groups, unwrap_arrays, compare, C_ARRAY_TYPE_INT64, C_ARRAY_TYPE_FLOAT64
+from quick_pandas.ext.argsort cimport radix_argsort, radix_argsort_groups, unwrap_arrays, compare, C_ARRAY_TYPE_INT64, C_ARRAY_TYPE_FLOAT64, C_ARRAY_TYPE_INT32, C_ARRAY_TYPE_FLOAT32
+
 from libc.stdlib cimport malloc, free
 from libc.stdio cimport printf
 from quick_pandas.np_funcs import *
 from cython.parallel import prange
+from quick_pandas.ext.operators cimport OPERATOR_INT, OPERATOR_LONG, OPERATOR_FLOAT, OPERATOR_DOUBLE, sum_int, sum_long, sum_float, sum_double, mean_int, mean_long, mean_float, mean_double
 
 ctypedef unsigned char uchar
-ctypedef fused numeric:
-    double
-    long
 cdef int C_NP_FUNCS_SUM = NP_FUNCS_SUM
 cdef int C_NP_FUNCS_MEAN = NP_FUNCS_MEAN
-
-cdef inline numeric mean0(numeric *values_c, int *indexes, int start, int end) nogil:
-    cdef numeric res = 0
-    cdef int i
-    for i in range(start, end):
-        res += values_c[indexes[i]]
-    return <numeric>(res / (end - start))
-
-
-cdef inline numeric sum0(numeric *values_c, int *indexes, int start, int end) nogil:
-    cdef numeric res = 0
-    cdef int i
-    for i in range(start, end):
-        res += values_c[indexes[i]]
-    return res
 
 
 cdef void transform(uchar **values_c, int *values_types, int* range_start, int range_size,
                     uchar **new_values_c, int *new_values_types,
-                    int func, int arrays_length, int *indexes) nogil:
+                    int func, int arrays_length, int *indexes, 
+                    OPERATOR_INT op_int, OPERATOR_LONG op_long, OPERATOR_FLOAT op_float, OPERATOR_DOUBLE op_double) nogil:
     cdef int i, j, k, start, end, dtype
-    cdef long sum_long, mean_long
-    cdef double sum_double, mean_double
+    cdef int res_int
+    cdef long res_long 
+    cdef float res_float
+    cdef double res_double
     for k in range(arrays_length):
-        for i in prange(range_size - 1, nogil=True):
-            dtype = values_types[k]
-            start = range_start[i]
-            end = range_start[i + 1]
-            if func == C_NP_FUNCS_SUM:
-                if dtype == C_ARRAY_TYPE_INT64:
-                    sum_long = sum0(<long*>values_c[k], indexes, start, end)
-                    for j in range(start, end):
-                        (<long*>new_values_c[k])[indexes[j]] = sum_long
-                elif dtype == C_ARRAY_TYPE_FLOAT64:
-                    sum_double = sum0(<double*>values_c[k], indexes, start, end)
-                    for j in range(start, end):
-                        (<double*>new_values_c[k])[indexes[j]] = sum_double
-            elif func == C_NP_FUNCS_MEAN:
-                if dtype == C_ARRAY_TYPE_INT64:
-                    mean_long = mean0(<long*>values_c[k], indexes, start, end)
-                    for j in range(start, end):
-                        (<long*>new_values_c[k])[indexes[j]] = mean_long
-                elif dtype == C_ARRAY_TYPE_FLOAT64:
-                    mean_double = mean0(<double*>values_c[k], indexes, start, end)
-                    for j in range(start, end):
-                        (<double*>new_values_c[k])[indexes[j]] = mean_double
+        dtype = values_types[k]
+        if dtype == C_ARRAY_TYPE_INT64:
+            for i in prange(range_size - 1, nogil=True):
+                start = range_start[i]
+                end = range_start[i + 1]
+                res_long = op_long(<long*>values_c[k], indexes, start, end)
+                for j in range(start, end):
+                    (<long*>new_values_c[k])[indexes[j]] = res_long
+        elif dtype == C_ARRAY_TYPE_INT32:
+            for i in prange(range_size - 1, nogil=True):
+                start = range_start[i]
+                end = range_start[i + 1]
+                res_int = op_int(<int*>values_c[k], indexes, start, end)
+                for j in range(start, end):
+                    (<int*>new_values_c[k])[indexes[j]] = res_int
+        elif dtype == C_ARRAY_TYPE_FLOAT64:
+            for i in prange(range_size - 1, nogil=True):
+                start = range_start[i]
+                end = range_start[i + 1]
+                res_double = op_double(<double*>values_c[k], indexes, start, end)
+                for j in range(start, end):
+                    (<double*>new_values_c[k])[indexes[j]] = res_double
+        elif dtype == C_ARRAY_TYPE_FLOAT32:
+            for i in prange(range_size - 1, nogil=True):
+                start = range_start[i]
+                end = range_start[i + 1]
+                res_float = op_float(<float*>values_c[k], indexes, start, end)
+                for j in range(start, end):
+                    (<float*>new_values_c[k])[indexes[j]] = res_float
 
 
 cdef void get_groups(uchar **arrays, int *dtypes, int arrays_length, int array_length,
@@ -78,6 +72,20 @@ cdef void get_groups(uchar **arrays, int *dtypes, int arrays_length, int array_l
             range_length[0] += 1
     range_start[range_length[0]] = array_length
     range_length[0] += 1
+
+
+cdef void get_ops(int func, OPERATOR_INT *o1, OPERATOR_LONG *o2, OPERATOR_FLOAT *o3, OPERATOR_DOUBLE *o4) nogil:
+    if func == 0:
+        o1[0] = mean_int
+        o2[0] = mean_long
+        o3[0] = mean_float
+        o4[0] = mean_double
+    elif func == 1:
+        o1[0] = sum_int
+        o2[0] = sum_long
+        o3[0] = sum_float
+        o4[0] = sum_double
+
 
 def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[str], func: Callable,
                         sort: bool = False, inplace=False):
@@ -95,7 +103,12 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     printf('[debug] radix sort completes, group size: %d\n', range_size)
 
     func = NP_FUNCS_MAP_REVERSE.get(func, None)
-    if func is None:
+    cdef OPERATOR_INT op_int = NULL
+    cdef OPERATOR_LONG op_long = NULL
+    cdef OPERATOR_FLOAT op_float = NULL
+    cdef OPERATOR_DOUBLE op_double = NULL
+    get_ops(func, &op_int, &op_long, &op_float, &op_double)
+    if op_int == NULL or op_long == NULL:
         raise Exception('unsupported transform function: %s' % func)
     values = [df[c].values for c in targets]
     new_values = [np.empty_like(v) for v in values]
@@ -105,7 +118,7 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     cdef int* new_values_types = unwrap_arrays(new_values, new_values_c)
     printf('[debug] prepare for transform completes\n')
     transform(values_c, values_types, range_start, range_size,
-              new_values_c, new_values_types, func, arrays_length, &indexes[0])
+              new_values_c, new_values_types, func, arrays_length, &indexes[0], op_int, op_long, op_float, op_double)
     printf('[debug] transform completes\n')
     free(new_values_c)
     free(values_c)
@@ -135,8 +148,13 @@ def transform_py(values: List[np.ndarray], ranges, indexes: np.ndarray, func: Ca
     cdef int* new_values_types = unwrap_arrays(new_values, new_values_c)
     cdef int func_int = NP_FUNCS_MAP_REVERSE.get(func, None)
     cdef int [::1] ii = indexes
+    cdef OPERATOR_INT op_int = NULL
+    cdef OPERATOR_LONG op_long = NULL
+    cdef OPERATOR_FLOAT op_float = NULL
+    cdef OPERATOR_DOUBLE op_double = NULL
+    get_ops(func_int, &op_int, &op_long, &op_float, &op_double)
     transform(c_arrays, dtypes_mem, range_start, range_size,
-              new_values_c, new_values_types, func_int, len(values), &ii[0])
+              new_values_c, new_values_types, func_int, len(values), &ii[0], op_int, op_long, op_float, op_double)
     free(new_values_c)
     free(range_start)
     free(c_arrays)
