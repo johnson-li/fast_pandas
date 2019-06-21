@@ -126,10 +126,10 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     free(c_arrays)
     #data = {**dict(zip(by_columns, keys)), **dict(zip(targets, new_values))}
     #return pd.DataFrame(data)
-    for i in range(len(targets)):
-        df['%s_t' % targets[i]] = new_values[i]
+    # for i in range(len(targets)):
+    #     df['%s_t' % targets[i]] = new_values[i]
     printf('[debug] dataframe completes\n')
-    return df
+    return new_values
 
 
 def transform_py(values: List[np.ndarray], ranges, indexes: np.ndarray, func: Callable):

@@ -16,8 +16,8 @@ A few setups are required. For example, we want to transform all of the values i
     ```
 5. Run your code.
     ```python
-    import quick_pandas.ext.demo_max
-    max.test()
+    import quick_pandas.ext.demo_max as demo
+    demo.test()
     ```
 6. There is a simple benchmark result that shows how our implementation out-performs pandas.
     ```python
