@@ -88,7 +88,13 @@ cdef void get_ops(int func, OPERATOR_INT *o1, OPERATOR_LONG *o2, OPERATOR_FLOAT 
 
 
 def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[str], func: Callable,
-                        sort: bool = False, inplace=False):
+                        sort=False, inplace=False):
+    return group_and_transform0(df, by_columns, targets, func, NULL, NULL, NULL, NULL, sort, inplace)
+
+
+cdef group_and_transform0(df: pd.DataFrame, by_columns: List[str], targets: List[str], func: Callable,
+                          OPERATOR_INT op_int, OPERATOR_LONG op_long,
+                          OPERATOR_FLOAT op_float, OPERATOR_DOUBLE op_double, sort: bool, inplace: bool):
     keys = [df[c].values for c in by_columns]
     array_length = len(keys[0])
     arrays_length = len(keys)
@@ -101,13 +107,9 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     radix_argsort_groups(c_arrays, dtypes_mem, arrays_length, &indexes[0], 0, 0, array_length, 
                          range_start, &range_size)
     printf('[debug] radix sort completes, group size: %d\n', range_size)
-
-    func = NP_FUNCS_MAP_REVERSE.get(func, None)
-    cdef OPERATOR_INT op_int = NULL
-    cdef OPERATOR_LONG op_long = NULL
-    cdef OPERATOR_FLOAT op_float = NULL
-    cdef OPERATOR_DOUBLE op_double = NULL
-    get_ops(func, &op_int, &op_long, &op_float, &op_double)
+    if op_int == NULL or op_long == NULL:
+        func = NP_FUNCS_MAP_REVERSE.get(func, None)
+        get_ops(func, &op_int, &op_long, &op_float, &op_double)
     if op_int == NULL or op_long == NULL:
         raise Exception('unsupported transform function: %s' % func)
     values = [df[c].values for c in targets]
@@ -120,16 +122,16 @@ def group_and_transform(df: pd.DataFrame, by_columns: List[str], targets: List[s
     transform(values_c, values_types, range_start, range_size,
               new_values_c, new_values_types, func, arrays_length, &indexes[0], op_int, op_long, op_float, op_double)
     printf('[debug] transform completes\n')
+    # for i in range(len(targets)):
+    #     df['%s_t' % targets[i]] = new_values[i]
+    printf('[debug] dataframe completes\n')
     free(new_values_c)
     free(values_c)
     free(range_start)
     free(c_arrays)
+    return new_values
     #data = {**dict(zip(by_columns, keys)), **dict(zip(targets, new_values))}
     #return pd.DataFrame(data)
-    # for i in range(len(targets)):
-    #     df['%s_t' % targets[i]] = new_values[i]
-    printf('[debug] dataframe completes\n')
-    return new_values
 
 
 def transform_py(values: List[np.ndarray], ranges, indexes: np.ndarray, func: Callable):
