@@ -25,40 +25,48 @@ cdef void transform(uchar **values_c, int *values_types, int* range_start, int r
                     int func, int arrays_length, int *indexes, 
                     OPERATOR_INT op_int, OPERATOR_LONG op_long, OPERATOR_FLOAT op_float, OPERATOR_DOUBLE op_double) nogil:
     cdef int i, j, k, start, end, dtype
-    cdef int res_int
-    cdef long res_long 
-    cdef float res_float
-    cdef double res_double
+    cdef int res_int, *new_values_int, *values_int
+    cdef long res_long, *new_values_long, *values_long
+    cdef float res_float, *new_values_float, *values_float
+    cdef double res_double, *new_values_double, *values_double
     for k in range(arrays_length):
         dtype = values_types[k]
         if dtype == C_ARRAY_TYPE_INT64:
-            for i in prange(range_size - 1, nogil=True):
+            values_long = <long*>values_c[k]
+            new_values_long = <long*>new_values_c[k]
+            for i in range(range_size - 1):
                 start = range_start[i]
                 end = range_start[i + 1]
-                res_long = op_long(<long*>values_c[k], indexes, start, end)
+                res_long = op_long(values_long, indexes, start, end)
                 for j in range(start, end):
-                    (<long*>new_values_c[k])[indexes[j]] = res_long
+                    new_values_long[indexes[j]] = res_long
         elif dtype == C_ARRAY_TYPE_INT32:
-            for i in prange(range_size - 1, nogil=True):
+            values_int = <int*>values_c[k]
+            new_values_int = <int*>new_values_c[k]
+            for i in range(range_size - 1):
                 start = range_start[i]
                 end = range_start[i + 1]
-                res_int = op_int(<int*>values_c[k], indexes, start, end)
+                res_int = op_int(values_int, indexes, start, end)
                 for j in range(start, end):
-                    (<int*>new_values_c[k])[indexes[j]] = res_int
+                    new_values_int[indexes[j]] = res_int
         elif dtype == C_ARRAY_TYPE_FLOAT64:
-            for i in prange(range_size - 1, nogil=True):
+            values_double = <double*>values_c[k]
+            new_values_double = <double*>new_values_c[k]
+            for i in range(range_size - 1):
                 start = range_start[i]
                 end = range_start[i + 1]
-                res_double = op_double(<double*>values_c[k], indexes, start, end)
+                res_double = op_double(values_double, indexes, start, end)
                 for j in range(start, end):
-                    (<double*>new_values_c[k])[indexes[j]] = res_double
+                    new_values_double[indexes[j]] = res_double
         elif dtype == C_ARRAY_TYPE_FLOAT32:
-            for i in prange(range_size - 1, nogil=True):
+            values_float = <float*>values_c[k]
+            new_values_float = <float*>new_values_c[k]
+            for i in range(range_size - 1):
                 start = range_start[i]
                 end = range_start[i + 1]
-                res_float = op_float(<float*>values_c[k], indexes, start, end)
+                res_float = op_float(values_float, indexes, start, end)
                 for j in range(start, end):
-                    (<float*>new_values_c[k])[indexes[j]] = res_float
+                    new_values_float[indexes[j]] = res_float
 
 
 cdef void get_groups(uchar **arrays, int *dtypes, int arrays_length, int array_length,
