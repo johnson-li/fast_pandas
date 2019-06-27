@@ -6,10 +6,10 @@ import pandas as pd
 
 def sort_values(df: pd.DataFrame, by: List[str]):
     if not isinstance(by, (list, tuple)):
-        by = []
+        by = [by]
     columns = [df[d].values for d in by]
     indexes = radix_argsort_py(columns)
-    return pd.DataFrame({df[c].values[indexes] for c in df.columns.values})
+    return pd.DataFrame({c: df[c].values[indexes] for c in by})
 
 
 def group_and_transform(df: pd.DataFrame, by: List[str], targets: List[str], func: Callable):

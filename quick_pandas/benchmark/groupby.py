@@ -7,7 +7,7 @@ from quick_pandas.api.pandas import group_and_transform, radix_argsort_py
 
 RANGE = 1000000000
 SIZE = 7000000
-REPEAT = 1
+REPEAT = 3
 
 
 def group_by():
